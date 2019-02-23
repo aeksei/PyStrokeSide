@@ -50,7 +50,7 @@ class PyStrokeSide:
 
         path = os.getcwd() + "\\LogData" + "\\Log"
         filehandler = logging.FileHandler(path + "\\{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now()))
-        filehandler.setLevel(logging.INFO)
+        filehandler.setLevel(logging.DEBUG)
         filehandler.setFormatter(formatter)
 
         logger.addHandler(console)
@@ -67,11 +67,11 @@ class PyStrokeSide:
             self.logger.debug('Create "RaceLog" directory')
 
         path = os.getcwd() + "\\LogData" + "\\RaceLog"
-        rh = logging.FileHandler(path + "\\{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now()))
-        rh.setLevel(logging.INFO)
+        rh = logging.FileHandler(path + "\\{:%Y-%m-%d_%H-%M-%S}.log".format(datetime.now()))
+        rh.setLevel(logging.DEBUG)
         race_logger.addHandler(rh)
 
-        self.logger.info("Init Race Log File")
+        self.logger.debug("Init Race Log File")
         return race_logger
 
     @staticmethod
@@ -127,19 +127,26 @@ class PyStrokeSide:
         if cmd[2] == 0x01 and line == 0:  # name race
             self.race_name = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
             self.race_logger = self.init_race_logger()
-            self.logger.debug("Name race:", self.race_name)
+            self.logger.info("Name race: ".format(self.race_name))
+            self.logger.debug(cmd)
         elif cmd[2] == 0xFF:  # name participant
             self.participant_name[line] = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
-            self.logger.debug("Participant", line, "have name:", self.participant_name[line])
+            self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
+            self.logger.debug(cmd)
+
+            # TODO
+            # restore name participant
 
     def set_race_lane_setup_command(self, cmd):
         self.erg_line[cmd[2]] = cmd[8]
-        self.logger.debug("erg", cmd[2], "is lane:", cmd[8])
+        self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
+        self.logger.debug(cmd)
 
     def set_all_race_params_command(self, cmd):
         if cmd[2] == 0x01:
             self.total_distance = self.__bytes2int(cmd[30:34])
-            self.logger.debug("set distance:", self.total_distance)
+            self.logger.info("set distance: {}".format(self.total_distance))
+            self.logger.debug(cmd)
 
     def update_race_data_response(self, resp):
         src = resp[3]
@@ -147,10 +154,12 @@ class PyStrokeSide:
         time = round(self.__bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
         stroke = resp[24]  # stroke
         split = round(500 * (time / distance) if distance != 0 else 0, 2)
-        self.logger.debug(" ".join(["erg", str(src), ": distance -", str(distance)]))
-        self.logger.debug(" ".join(["erg", str(src), ": time -", str(time)]))
-        self.logger.debug(" ".join(["erg", str(src), ": stroke -", str(stroke)]))
-        self.logger.debug(" ".join(["erg", str(src), ": split -", str(split)]))
+        self.logger.info("erg {}: distance - {}, time - {}, stroke - {}, split - {}".format(src,
+                                                                                            distance,
+                                                                                            time,
+                                                                                            stroke,
+                                                                                            split))
+        self.logger.debug(resp)
 
         self.race_data.append(dict(line=self.erg_line[src],
                                    participant_name=self.participant_name[self.erg_line[src]],
@@ -159,6 +168,8 @@ class PyStrokeSide:
                                    stroke=stroke,
                                    split=split))
 
+        # TODO
+        # full data
         if len(self.race_data) == len(self.erg_line):
             self.send_race_data()
             self.race_data = []
@@ -190,5 +201,5 @@ if __name__ == "__main__":
     TOKEN = "aeksei"
 
     race = PyStrokeSide(ADDRESS, TOKEN)
-    #race.sniffing()
-    race.test()
+    race.sniffing()
+    #race.test()
