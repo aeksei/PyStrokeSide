@@ -4,7 +4,7 @@ from datetime import datetime
 import socketio
 import logging
 import random
-
+from logging.handlers import RotatingFileHandler
 
 
 class PyStrokeSide:
@@ -12,7 +12,7 @@ class PyStrokeSide:
     # PATH = r"C:\Program Files\USBPcap"
     _PATH_USBPCAP = os.getcwd() + r"\USBPcap"
     command = _PATH_USBPCAP + r"\USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
-    LEN_BUF = 10
+    LEN_BUF = 1
 
     def __init__(self, address=None, token=None):
         self.race_name = None
@@ -31,7 +31,8 @@ class PyStrokeSide:
             self.sio.emit('login', {'token': self.token})
 
         self.logger = self.init_logger()
-        self.race_logger = None
+        self.race_logger = self.init_race_logger()
+        self.raw_logger = self.init_raw_logger()
 
     def init_logger(self):
         if "LogData" not in os.listdir():
@@ -45,11 +46,14 @@ class PyStrokeSide:
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
         console = logging.StreamHandler()
-        console.setLevel(logging.DEBUG)
+        console.setLevel(logging.INFO)
         console.setFormatter(formatter)
 
         path = os.getcwd() + "\\LogData" + "\\Log"
-        filehandler = logging.FileHandler(path + "\\{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now()))
+        filehandler = RotatingFileHandler(path + "\\PyStrokeSide.log",
+                                          maxBytes=25 * 1024 * 1024,
+                                          backupCount=50)
+
         filehandler.setLevel(logging.DEBUG)
         filehandler.setFormatter(formatter)
 
@@ -67,12 +71,34 @@ class PyStrokeSide:
             self.logger.debug('Create "RaceLog" directory')
 
         path = os.getcwd() + "\\LogData" + "\\RaceLog"
-        rh = logging.FileHandler(path + "\\{:%Y-%m-%d_%H-%M-%S}.log".format(datetime.now()))
+        rh = logging.FileHandler(path + "\\{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now()))
         rh.setLevel(logging.DEBUG)
         race_logger.addHandler(rh)
 
         self.logger.debug("Init Race Log File")
         return race_logger
+
+    def init_raw_logger(self):
+        raw_logger = logging.getLogger(__file__)
+        raw_logger.setLevel(logging.DEBUG)
+
+        if "RawCommands" not in os.listdir(os.getcwd() + "\\LogData"):
+            os.mkdir(os.getcwd() + "\\LogData" + "\\RawCommands")
+
+        path = os.getcwd() + "\\LogData" + "\\RawCommands"
+        rh = RotatingFileHandler(path + "\\RawCommands.log",
+                                          maxBytes=25 * 1024 * 1024,
+                                          backupCount=50)
+        rh.setLevel(logging.DEBUG)
+        raw_logger.addHandler(rh)
+
+        return raw_logger
+
+    def close_race_logger(self):
+        handlers = self.race_logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.race_logger.removeHandler(handler)
 
     @staticmethod
     def __bytes2int(raw_bytes):
@@ -107,26 +133,15 @@ class PyStrokeSide:
         self.race_logger.info(data)
         self.logger.debug("Send race data to server: {}".format(data))
 
-    def sniffing(self):
-        process = Popen(self.command, stdout=PIPE, shell=True)
-        self.logger.info("Open USBPcap")
-        buffer = b""
-
-        self.logger.info("Start sniffing")
-        while True:
-            buffer += process.stdout.read(self.LEN_BUF)
-            if b"\x02\xf0" in buffer and b"\xf2" in buffer:
-                cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
-                if cmd:
-                    self.handler([c for c in cmd])
-
-            buffer = buffer[buffer.find(b"\xf2") + 1:]
-
     def set_race_participant_command(self, cmd):
         line = cmd[8]
         if cmd[2] == 0x01 and line == 0:  # name race
             self.race_name = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
+            self.close_race_logger()
             self.race_logger = self.init_race_logger()
+            self.logger.info("Start new race")
+            self.race_logger.info("Start new race")
+
             self.logger.info("Name race: ".format(self.race_name))
             self.logger.debug(cmd)
         elif cmd[2] == 0xFF:  # name participant
@@ -159,7 +174,7 @@ class PyStrokeSide:
                                                                                             time,
                                                                                             stroke,
                                                                                             split))
-        self.logger.debug(resp)
+        self.logger.debug("resp from update_race_data: {}".format(resp))
 
         self.race_data.append(dict(line=self.erg_line[src],
                                    participant_name=self.participant_name[self.erg_line[src]],
@@ -184,6 +199,22 @@ class PyStrokeSide:
         elif cmd[5] == 0x76 and cmd[7] == 0x33:
             self.update_race_data_response(cmd)
 
+    def sniffing(self):
+        process = Popen(self.command, stdout=PIPE, shell=True)
+        self.logger.info("Open USBPcap")
+        buffer = b""
+
+        self.logger.info("Start sniffing")
+        while True:
+            buffer += process.stdout.read(self.LEN_BUF)
+            if b"\x02\xf0" in buffer and b"\xf2" in buffer:
+                cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
+                if cmd:
+                    self.handler([c for c in cmd])
+                    self.raw_logger.debug(" ".join([hex(c)[2:].rjust(2, "0") for c in cmd]))
+
+                buffer = buffer[buffer.find(b"\xf2") + 1:]
+
     def test(self):
         self.erg_line = {1: 1, 2: 2}
         self.participant_name = {1: "Lane1", 2: "Lane2"}
@@ -191,7 +222,6 @@ class PyStrokeSide:
             for line in f:
                 cmd = [int(i, 16) for i in line[:-1].split(" ")]
                 self.handler(cmd)
-                self.logger.debug(line[:-1])
 
         self.sio.disconnect()
 
@@ -202,4 +232,4 @@ if __name__ == "__main__":
 
     race = PyStrokeSide(ADDRESS, TOKEN)
     race.sniffing()
-    #race.test()
+    # race.test()
