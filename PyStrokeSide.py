@@ -3,6 +3,7 @@ import sys
 import time
 import logging
 import socketio
+import configparser
 from datetime import datetime
 from subprocess import Popen, PIPE
 from logging.handlers import RotatingFileHandler
@@ -15,6 +16,9 @@ class PyStrokeSide:
 
     def __init__(self, address=None, token=None):
         self.HOME_DIR = os.getcwd()
+        self.CONFIG_FILE = "race.conf"
+        self.race_file = None
+
         self.race_name = None
         self.erg_line = {}
         self.participant_name = {}
@@ -26,7 +30,11 @@ class PyStrokeSide:
         self.timeout = 0
 
         self.logger = self.init_logger()
+        self.config = None
+        self.restore_config()
+
         self.race_logger = None
+        self.init_race_logger(self.config["RACE"]["race_file"])
         self.raw_logger = self.init_raw_logger()
 
         try:
@@ -39,7 +47,6 @@ class PyStrokeSide:
             self.logger.critical(
                 'Не удалось установить соединение с сервером. '
                 'Проверьте интернет соединение или работоспособность сервера.')
-            sys.exit()
 
         if "USBPcap" not in os.listdir(r"C:\Program Files"):
             self.logger.critical('Необходимо установить программу "USBPcap"')
@@ -72,7 +79,7 @@ class PyStrokeSide:
 
         return logger
 
-    def init_race_logger(self):
+    def init_race_logger(self, filename=None):
         if self.race_logger is not None:
             handlers = self.race_logger.handlers[:]
             for handler in handlers:
@@ -87,13 +94,15 @@ class PyStrokeSide:
             self.logger.debug('Create "RaceLog" directory')
 
         path = os.getcwd() + "\\LogData" + "\\RaceLog" + "\\"
-        filename = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
+        if filename is None:
+            self.race_file = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
+            self.logger.info("Init Race Log File: {}".format(self.race_file))
+        else:
+            self.logger.info("Restore Race Log File: {}".format(self.race_file))
 
-        racehandler = logging.FileHandler(path + filename)
+        racehandler = logging.FileHandler(path + self.race_file)
         racehandler.setLevel(logging.DEBUG)
         self.race_logger.addHandler(racehandler)
-
-        self.logger.info("Init Race Log File: {}".format(filename))
 
     def init_raw_logger(self):
         if "RawCommands" not in os.listdir(os.getcwd() + "\\LogData"):
@@ -116,6 +125,37 @@ class PyStrokeSide:
         raw_logger.addHandler(filehandler)
 
         return raw_logger
+
+    def create_config(self):
+        self.config = configparser.ConfigParser(allow_no_value=True)
+        self.config["SERVER"] = {}
+        self.config["NUMERATION_ERG"] = {}
+        self.config["PARTICIPANT_NAME"] = {}
+        self.config["RACE"] = {}
+
+        with open(self.CONFIG_FILE, "w") as configfile:
+            self.config.write(configfile)
+            self.logger.info("Create configure file {}".format(self.CONFIG_FILE))
+
+    def restore_config(self):
+        if self.CONFIG_FILE not in os.listdir(self.HOME_DIR):
+            self.create_config()
+        else:
+            self.config = configparser.ConfigParser()
+            self.config.read(self.CONFIG_FILE)
+            for erg_num in self.config["NUMERATION_ERG"]:
+                self.erg_line[int(erg_num)] = self.config.getint("NUMERATION_ERG", erg_num)
+            for line in self.config["PARTICIPANT_NAME"]:
+                self.participant_name[int(line)] = self.config.get("PARTICIPANT_NAME", line)
+            self.race_name = self.config["RACE"]["race_name"]
+            self.total_distance = self.config["RACE"]["total_distance"]
+            self.race_file = self.config["RACE"]["race_file"]
+
+            self.logger.info("Restore configure file {}".format(self.CONFIG_FILE))
+
+    def rewrite_config(self, section, value):
+        self.config.remove_section(section)
+        self.config[section] = value
 
     @staticmethod
     def __bytes2int(raw_bytes):
@@ -178,9 +218,6 @@ class PyStrokeSide:
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
             self.logger.debug(self.__int2bytes(cmd))
 
-            # TODO
-            # restore name participant
-
     def set_race_lane_setup_command(self, cmd):
         self.erg_line[cmd[2]] = cmd[8]
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
@@ -221,10 +258,20 @@ class PyStrokeSide:
             self.set_race_participant_command(cmd)
         elif cmd[4] == 0x7e and cmd[6] == 0x0b:
             self.set_race_lane_setup_command(cmd)
-        elif cmd[4] == 0x76 and cmd[6] == 0x1d:
-            self.set_all_race_params_command(cmd)
         elif cmd[5] == 0x76 and cmd[7] == 0x33:
             self.update_race_data_response(cmd)
+        elif cmd[4] == 0x76 and cmd[6] == 0x13 and cmd[9] == 0x0f:
+            if cmd[2] == len(self.erg_line):
+                self.rewrite_config('NUMERATION_ERG', self.erg_line)
+        elif cmd[4] == 0x76 and cmd[6] == 0x1d:
+            self.set_all_race_params_command(cmd)
+            if cmd[2] == len(self.erg_line):
+                self.rewrite_config('PARTICIPANT_NAME', self.participant_name)
+                self.rewrite_config('RACE', {'total_distance': self.total_distance,
+                                             'race_name': self.race_name,
+                                             'race_file': self.race_file})
+                with open(self.CONFIG_FILE, "w") as configfile:
+                    self.config.write(configfile)
 
     def sniffing(self):
         os.chdir(self._PATH_USBPCAP)
@@ -281,6 +328,6 @@ if __name__ == "__main__":
     ADDRESS = "http://broadcast.strokeside.ru:9090"
     TOKEN = "aeksei"
 
-    race = PyStrokeSide(ADDRESS, TOKEN)
+    race = PyStrokeSide()
     race.sniffing()
-    #race.test()
+    # race.test()
