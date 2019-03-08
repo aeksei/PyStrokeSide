@@ -34,7 +34,8 @@ class PyStrokeSide:
         self.restore_config()
 
         self.race_logger = None
-        self.init_race_logger(self.config["RACE"]["race_file"])
+        if self.race_name is not None:
+            self.init_race_logger(self.race_name)
         self.raw_logger = self.init_raw_logger()
 
         try:
@@ -147,9 +148,9 @@ class PyStrokeSide:
                 self.erg_line[int(erg_num)] = self.config.getint("NUMERATION_ERG", erg_num)
             for line in self.config["PARTICIPANT_NAME"]:
                 self.participant_name[int(line)] = self.config.get("PARTICIPANT_NAME", line)
-            self.race_name = self.config["RACE"]["race_name"]
-            self.total_distance = self.config["RACE"]["total_distance"]
-            self.race_file = self.config["RACE"]["race_file"]
+            self.race_name = self.config["RACE"]["race_name"] if "race_name" in self.config["RACE"] else None
+            self.total_distance = self.config["RACE"]["total_distance"] if "total_distance" in self.config["RACE"] else None
+            self.race_file = self.config["RACE"]["race_file"] if "race_file" in self.config["RACE"] else None
 
             self.logger.info("Restore configure file {}".format(self.CONFIG_FILE))
 
@@ -199,10 +200,11 @@ class PyStrokeSide:
 
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
-            if self.timeout != 0:
-                time.sleep(self.timeout)
+            self.logger.info("send data to server")
 
         self.race_logger.info(data)
+        if self.timeout != 0:
+            time.sleep(self.timeout)
 
     def set_race_participant_command(self, cmd):
         line = cmd[8]
@@ -321,13 +323,11 @@ class PyStrokeSide:
 
                 self.handler(cmd)
 
-        self.sio.disconnect()
-
 
 if __name__ == "__main__":
     ADDRESS = "http://broadcast.strokeside.ru:9090"
     TOKEN = "aeksei"
 
-    race = PyStrokeSide()
+    race = PyStrokeSide(ADDRESS, TOKEN)
     race.sniffing()
-    # race.test()
+    #race.test()
