@@ -21,7 +21,7 @@ class PyStrokeSide:
 
         self.race_name = None
         self.erg_line = {}
-        self.participant_name = {}
+        self.participant_name = {i+1: i+1 for i in range(20)}
         self.total_distance = None
         self.race_data = {}
 
@@ -149,7 +149,8 @@ class PyStrokeSide:
             for line in self.config["PARTICIPANT_NAME"]:
                 self.participant_name[int(line)] = self.config.get("PARTICIPANT_NAME", line)
             self.race_name = self.config["RACE"]["race_name"] if "race_name" in self.config["RACE"] else None
-            self.total_distance = self.config["RACE"]["total_distance"] if "total_distance" in self.config["RACE"] else None
+            self.total_distance = self.config["RACE"]["total_distance"] if "total_distance" in self.config[
+                "RACE"] else None
             self.race_file = self.config["RACE"]["race_file"] if "race_file" in self.config["RACE"] else None
 
             self.logger.info("Restore configure file {}".format(self.CONFIG_FILE))
@@ -216,6 +217,8 @@ class PyStrokeSide:
             self.logger.debug(self.__int2bytes(cmd))
 
         elif cmd[2] == 0xFF:  # name participant
+            if line == 0x01:
+                self.participant_name.clear()
             self.participant_name[line] = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
             self.logger.debug(self.__int2bytes(cmd))
@@ -249,7 +252,7 @@ class PyStrokeSide:
                         split=split)
 
         self.race_data[self.erg_line[src]] = erg_data
-        if src == len(self.erg_line):
+        if src == len(self.participant_name):
             self.send_race_data()
 
         self.logger.info(erg_data)
@@ -267,13 +270,14 @@ class PyStrokeSide:
                 self.rewrite_config('NUMERATION_ERG', self.erg_line)
         elif cmd[4] == 0x76 and cmd[6] == 0x1d:
             self.set_all_race_params_command(cmd)
-            if cmd[2] == len(self.erg_line):
+            if cmd[2] == len(self.participant_name):
                 self.rewrite_config('PARTICIPANT_NAME', self.participant_name)
                 self.rewrite_config('RACE', {'total_distance': self.total_distance,
                                              'race_name': self.race_name,
                                              'race_file': self.race_file})
                 with open(self.CONFIG_FILE, "w") as configfile:
                     self.config.write(configfile)
+                    self.logger.info("write configure")
 
     def sniffing(self):
         os.chdir(self._PATH_USBPCAP)
@@ -328,6 +332,7 @@ if __name__ == "__main__":
     ADDRESS = "http://broadcast.strokeside.ru:9090"
     TOKEN = "aeksei"
 
-    race = PyStrokeSide(ADDRESS, TOKEN)
-    race.sniffing()
-    #race.test()
+    # race = PyStrokeSide(ADDRESS, TOKEN)
+    race = PyStrokeSide()
+    # race.sniffing()
+    race.test()
