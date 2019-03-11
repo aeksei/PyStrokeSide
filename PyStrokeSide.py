@@ -176,17 +176,6 @@ class PyStrokeSide:
     def __int2bytes(int_list):
         return " ".join([hex(i)[2:].rjust(2, "0") for i in int_list])
 
-    def reset_erg_data(self):
-        for src in range(1, len(self.erg_line) + 1):
-            erg_data = dict(line=self.erg_line[src],
-                            participant_name=self.participant_name[self.erg_line[src]],
-                            distance=0,
-                            time=0,
-                            stroke=0,
-                            split=0)
-
-            self.race_data[self.erg_line[src]] = erg_data
-
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
                     race_name=self.race_name,
@@ -204,9 +193,9 @@ class PyStrokeSide:
     def set_race_participant_command(self, cmd):
         line = cmd[8]
         if cmd[2] == 0x01 and line == 0:  # name race
-            self.logger.info("Start new race")
-
             self.race_name = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
+
+            self.logger.info("Start new race")
             self.logger.info("Name race: {}".format(self.race_name))
             self.logger.debug(self.__int2bytes(cmd))
 
@@ -214,6 +203,7 @@ class PyStrokeSide:
             if line == 0x01:
                 self.participant_name.clear()
             self.participant_name[line] = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
+
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
             self.logger.debug(self.__int2bytes(cmd))
 
@@ -221,6 +211,7 @@ class PyStrokeSide:
         if cmd[2] == 0x01:
             self.erg_line.clear()
         self.erg_line[cmd[2]] = cmd[8]
+
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
         self.logger.debug(self.__int2bytes(cmd))
 
@@ -247,8 +238,8 @@ class PyStrokeSide:
                         time=time,
                         stroke=stroke,
                         split=split)
-
         self.race_data[self.erg_line[src]] = erg_data
+
         if src == len(self.participant_name):
             self.send_race_data()
 
