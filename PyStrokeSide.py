@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import logging
 import socketio
@@ -332,7 +331,7 @@ if __name__ == "__main__":
     ADDRESS = "http://broadcast.strokeside.ru:9090"
     TOKEN = "aeksei"
 
-    # race = PyStrokeSide(ADDRESS, TOKEN)
-    race = PyStrokeSide()
-    # race.sniffing()
+    race = PyStrokeSide(ADDRESS, TOKEN)
+    #race = PyStrokeSide()
+    #race.sniffing()
     race.test()
