@@ -294,15 +294,14 @@ class PyStrokeSide:
                 if cmd:
                     self.raw_logger.debug(self.__int2bytes(cmd))
                     # Byte Staffing
-                    while len(cmd) > 46:
-                        if b"\xf3\x00" in cmd:
-                            cmd = cmd.replace(b"\xf3\x00", b"\xf0")
-                        elif b"\xf3\x01" in cmd:
-                            cmd = cmd.replace(b"\xf3\x01", b"\xf1")
-                        elif b"\xf3\x02" in cmd:
-                            cmd = cmd.replace(b"\xf3\x02", b"\xf2")
-                        elif b"\xf3\x03" in cmd:
-                            cmd = cmd.replace(b"\xf3\x03", b"\xf3")
+                    while b"\xf3\x00" in cmd:
+                        cmd = cmd.replace(b"\xf3\x00", b"\xf0")
+                    while b"\xf3\x01" in cmd:
+                        cmd = cmd.replace(b"\xf3\x01", b"\xf1")
+                    while b"\xf3\x02" in cmd:
+                        cmd = cmd.replace(b"\xf3\x02", b"\xf2")
+                    while b"\xf3\x03" in cmd:
+                        cmd = cmd.replace(b"\xf3\x03", b"\xf3")
                     self.handler([c for c in cmd])
 
             buffer = buffer[buffer.find(b"\xf2") + 1:]
