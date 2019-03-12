@@ -2,11 +2,11 @@ import os
 import time
 import logging
 import socketio
-import configparser
 from datetime import datetime
 from subprocess import Popen, PIPE
 from logging.handlers import RotatingFileHandler
 
+from config import Config
 
 class PyStrokeSide:
     _PATH_USBPCAP = r"C:\Program Files\USBPcap"
@@ -15,7 +15,6 @@ class PyStrokeSide:
 
     def __init__(self):
         self.HOME_DIR = os.getcwd()
-        self.CONFIG_FILE = "race.conf"
         self.race_file = None
 
         self.race_name = None
@@ -29,7 +28,7 @@ class PyStrokeSide:
         self.timeout = 0
 
         self.logger = self.init_logger()
-        self.config = configparser.ConfigParser(allow_no_value=True)
+        self.config = Config()
         self.restore_config()
 
         self.race_logger = None
@@ -126,60 +125,24 @@ class PyStrokeSide:
 
         return raw_logger
 
-    def create_config(self):
-        self.config.add_section('SERVER')
-        self.config.set('SERVER', '# set address server and token', None)
-        self.config.set('SERVER', 'address = ', None)
-        self.config.set('SERVER', 'token = ', None)
-
-        self.config.add_section('RACE')
-        self.config.set('RACE', '# info about last race', None)
-
-        self.config.add_section('NUMERATION_ERG')
-
-        self.config.add_section('PARTICIPANT_NAME')
-
-    def write_config(self):
-        self.config.set('SERVER', 'address = ', self.address)
-        self.config.set('SERVER', 'token = ', self.token)
-
-        self.config.set('RACE', 'total_distance', str(self.total_distance))
-        self.config.set('RACE', 'race_name', str(self.race_name))
-        self.config.set('RACE', 'race_file', str(self.race_file))
-        for erg in self.erg_line:
-            self.config.set('NUMERATION_ERG', str(erg), str(self.erg_line[erg]))
-        for line in self.participant_name:
-            self.config.set('PARTICIPANT_NAME', str(line), str(self.participant_name[line]))
-
-        with open(self.CONFIG_FILE, "w") as configfile:
-            self.config.write(configfile)
-            self.logger.info("write configure")
-
     def restore_config(self):
-        if self.CONFIG_FILE not in os.listdir(self.HOME_DIR):
-            self.create_config()
+        if self.config.filename not in os.listdir(self.HOME_DIR):
+            self.config.create()
+            self.logger.info("Create configure file {}".format(self.config.filename))
         else:
-            self.config.read(self.CONFIG_FILE)
+            if 'address' in self.config['SERVER']:
+                self.address = self.config['SERVER']['address']
+            if 'token' in self.config['SERVER']:
+                self.token = self.config['SERVER']['token']
 
-            try:
-                self.address = self.config.get('SERVER', 'address')
-            except configparser.NoOptionError:
-                self.address = None
-            try:
-                self.token = self.config.get('SERVER', 'token')
-            except configparser.NoOptionError:
-                self.token = None
+            self.total_distance = self.config['RACE']['total_distance']
+            self.race_name = self.config['RACE']['race_name']
+            self.race_file = self.config['RACE']['race_file']
 
-            self.race_name = self.config.get('RACE', 'race_name')
-            self.total_distance = self.config.get('RACE', 'total_distance')
-            self.race_file = self.config.get('RACE', 'race_file')
-
-            for erg_num in self.config["NUMERATION_ERG"]:
-                self.erg_line[int(erg_num)] = self.config.getint("NUMERATION_ERG", erg_num)
+            for erg_num in self.config['NUMERATION_ERG']:
+                self.erg_line[int(erg_num)] = self.config['NUMERATION_ERG'].as_int(erg_num)
             for line in self.config["PARTICIPANT_NAME"]:
-                self.participant_name[int(line)] = self.config.get("PARTICIPANT_NAME", line)
-
-            self.logger.info("Restore configure file {}".format(self.CONFIG_FILE))
+                self.participant_name[int(line)] = self.config["PARTICIPANT_NAME"].as_int(line)
 
     @staticmethod
     def __bytes2int(raw_bytes):
@@ -332,5 +295,5 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
-    # race.sniffing()
+    #race.sniffing()
     race.test()
