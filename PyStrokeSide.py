@@ -13,7 +13,7 @@ class PyStrokeSide:
     command = r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
     LEN_BUF = 1
 
-    def __init__(self, address=None, token=None):
+    def __init__(self):
         self.HOME_DIR = os.getcwd()
         self.CONFIG_FILE = "race.conf"
         self.race_file = None
@@ -24,13 +24,13 @@ class PyStrokeSide:
         self.total_distance = None
         self.race_data = {}
 
-        self.logger = self.init_logger()
-        self.config = None
-        self.restore_config()
-
-        self.address = address
-        self.token = token
+        self.address = None
+        self.token = None
         self.timeout = 0
+
+        self.logger = self.init_logger()
+        self.config = configparser.ConfigParser(allow_no_value=True)
+        self.restore_config()
 
         self.race_logger = None
         if self.race_name is not None:
@@ -126,30 +126,58 @@ class PyStrokeSide:
 
         return raw_logger
 
+    def create_config(self):
+        self.config.add_section('SERVER')
+        self.config.set('SERVER', '# set address server and token', None)
+        self.config.set('SERVER', 'address = ', None)
+        self.config.set('SERVER', 'token = ', None)
+
+        self.config.add_section('RACE')
+        self.config.set('RACE', '# info about last race', None)
+
+        self.config.add_section('NUMERATION_ERG')
+
+        self.config.add_section('PARTICIPANT_NAME')
+
     def write_config(self):
-        self.config['NUMERATION_ERG'] = self.erg_line
-        self.config['PARTICIPANT_NAME'] = self.participant_name
-        self.config['RACE'] = {'total_distance': self.total_distance,
-                               'race_name': self.race_name,
-                               'race_file': self.race_file}
+        self.config.set('SERVER', 'address = ', self.address)
+        self.config.set('SERVER', 'token = ', self.token)
+
+        self.config.set('RACE', 'total_distance', str(self.total_distance))
+        self.config.set('RACE', 'race_name', str(self.race_name))
+        self.config.set('RACE', 'race_file', str(self.race_file))
+        for erg in self.erg_line:
+            self.config.set('NUMERATION_ERG', str(erg), str(self.erg_line[erg]))
+        for line in self.participant_name:
+            self.config.set('PARTICIPANT_NAME', str(line), str(self.participant_name[line]))
+
         with open(self.CONFIG_FILE, "w") as configfile:
             self.config.write(configfile)
             self.logger.info("write configure")
 
     def restore_config(self):
-        self.config = configparser.ConfigParser(allow_no_value=True)
         if self.CONFIG_FILE not in os.listdir(self.HOME_DIR):
-            self.write_config()
+            self.create_config()
         else:
             self.config.read(self.CONFIG_FILE)
+
+            try:
+                self.address = self.config.get('SERVER', 'address')
+            except configparser.NoOptionError:
+                self.address = None
+            try:
+                self.token = self.config.get('SERVER', 'token')
+            except configparser.NoOptionError:
+                self.token = None
+
+            self.race_name = self.config.get('RACE', 'race_name')
+            self.total_distance = self.config.get('RACE', 'total_distance')
+            self.race_file = self.config.get('RACE', 'race_file')
+
             for erg_num in self.config["NUMERATION_ERG"]:
                 self.erg_line[int(erg_num)] = self.config.getint("NUMERATION_ERG", erg_num)
             for line in self.config["PARTICIPANT_NAME"]:
                 self.participant_name[int(line)] = self.config.get("PARTICIPANT_NAME", line)
-            self.race_name = self.config["RACE"]["race_name"] if "race_name" in self.config["RACE"] else None
-            self.total_distance = self.config["RACE"]["total_distance"] if "total_distance" in self.config[
-                "RACE"] else None
-            self.race_file = self.config["RACE"]["race_file"] if "race_file" in self.config["RACE"] else None
 
             self.logger.info("Restore configure file {}".format(self.CONFIG_FILE))
 
@@ -195,8 +223,7 @@ class PyStrokeSide:
         if cmd[2] == 0x01 and line == 0:  # name race
             self.race_name = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
 
-            self.logger.info("Start new race")
-            self.logger.info("Name race: {}".format(self.race_name))
+            self.logger.info("Start new race: {}".format(self.race_name))
             self.logger.debug(self.__int2bytes(cmd))
 
         elif cmd[2] == 0xFF:  # name participant
@@ -304,10 +331,6 @@ class PyStrokeSide:
 
 
 if __name__ == "__main__":
-    ADDRESS = "http://broadcast.strokeside.ru:9090"
-    TOKEN = "aeksei"
-
-    #race = PyStrokeSide(ADDRESS, TOKEN)
     race = PyStrokeSide()
     # race.sniffing()
     race.test()
