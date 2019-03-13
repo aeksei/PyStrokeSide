@@ -7,6 +7,7 @@ from subprocess import Popen, PIPE
 from logging.handlers import RotatingFileHandler
 
 from config import Config
+from config import _bytes2ascii, _bytes2int, _int2bytes
 
 class PyStrokeSide:
     _PATH_USBPCAP = r"C:\Program Files\USBPcap"
@@ -131,41 +132,37 @@ class PyStrokeSide:
             self.logger.info("Create configure file {}".format(self.config.filename))
         else:
             if 'address' in self.config['SERVER']:
-                self.address = self.config['SERVER']['address']
+                self.address = self.config['SERVER']['address'] if self.config['SERVER']['address'] != '' else None
             if 'token' in self.config['SERVER']:
-                self.token = self.config['SERVER']['token']
+                self.token = self.config['SERVER']['token'] if self.config['SERVER']['token'] != '' else None
 
-            self.total_distance = self.config['RACE']['total_distance']
-            self.race_name = self.config['RACE']['race_name']
-            self.race_file = self.config['RACE']['race_file']
+            self.total_distance = \
+                self.config['RACE']['total_distance'] if self.config['RACE']['total_distance'] != '' else None
+            self.race_name = self.config['RACE']['race_name'] if self.config['RACE']['race_name'] != '' else None
+            self.race_file = self.config['RACE']['race_file'] if self.config['RACE']['race_file'] != '' else None
 
             for erg_num in self.config['NUMERATION_ERG']:
                 self.erg_line[int(erg_num)] = self.config['NUMERATION_ERG'].as_int(erg_num)
             for line in self.config["PARTICIPANT_NAME"]:
-                self.participant_name[int(line)] = self.config["PARTICIPANT_NAME"].as_int(line)
+                self.participant_name[int(line)] = self.config["PARTICIPANT_NAME"][line]
 
-    @staticmethod
-    def __bytes2int(raw_bytes):
-        raw_bytes = raw_bytes[::-1]
-        num_bytes = len(raw_bytes)
-        integer = 0
+    def write_config(self):
+        if self.address is not None:
+            self.config['SERVER']['address'] = self.address
+        if self.token is not None:
+            self.config['SERVER']['token'] = self.token
 
-        for k in range(num_bytes):
-            integer = (raw_bytes[k] << (8 * k)) | integer
+        self.config['RACE']['total_distance'] = self.total_distance
+        self.config['RACE']['race_name'] = self.race_name
+        self.config['RACE']['race_file'] = self.race_file
 
-        return integer
+        for erg, line in self.erg_line.items():
+            self.config['NUMERATION_ERG'][str(erg)] = line
 
-    @staticmethod
-    def __bytes2ascii(raw_bytes):
-        word = ""
-        for letter in raw_bytes:
-            word += chr(letter)
+        for line, name in self.participant_name.items():
+            self.config['PARTICIPANT_NAME'][str(line)] = name
 
-        return word
-
-    @staticmethod
-    def __int2bytes(int_list):
-        return " ".join([hex(i)[2:].rjust(2, "0") for i in int_list])
+        self.config.write()
 
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
@@ -184,18 +181,18 @@ class PyStrokeSide:
     def set_race_participant_command(self, cmd):
         line = cmd[8]
         if cmd[2] == 0x01 and line == 0:  # name race
-            self.race_name = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
+            self.race_name = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
 
             self.logger.info("Start new race: {}".format(self.race_name))
-            self.logger.debug(self.__int2bytes(cmd))
+            self.logger.debug(_int2bytes(cmd))
 
         elif cmd[2] == 0xFF:  # name participant
             if line == 0x01:
                 self.participant_name.clear()
-            self.participant_name[line] = self.__bytes2ascii(cmd[9:9 + cmd[7] - 2])
+            self.participant_name[line] = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
 
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
-            self.logger.debug(self.__int2bytes(cmd))
+            self.logger.debug(_int2bytes(cmd))
 
     def set_race_lane_setup_command(self, cmd):
         if cmd[2] == 0x01:
@@ -203,13 +200,13 @@ class PyStrokeSide:
         self.erg_line[cmd[2]] = cmd[8]
 
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
-        self.logger.debug(self.__int2bytes(cmd))
+        self.logger.debug(_int2bytes(cmd))
 
     def set_all_race_params_command(self, cmd):
         if cmd[2] == 0x01:
-            self.total_distance = self.__bytes2int(cmd[30:34])
+            self.total_distance = _bytes2int(cmd[30:34])
             self.logger.info("set distance: {}".format(self.total_distance))
-            self.logger.debug(self.__int2bytes(cmd))
+            self.logger.debug(_int2bytes(cmd))
 
             self.init_race_logger()
             self.race_data.clear()
@@ -217,8 +214,8 @@ class PyStrokeSide:
 
     def update_race_data_response(self, resp):
         src = resp[3]
-        distance = round(self.__bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
-        time = round(self.__bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
+        distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
+        time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
         stroke = resp[24]  # stroke
         split = round(500 * (time / distance) if distance != 0 else 0, 2)
 
@@ -234,7 +231,7 @@ class PyStrokeSide:
             self.send_race_data()
 
         self.logger.info(erg_data)
-        self.logger.debug(self.__int2bytes(resp))
+        self.logger.debug(_int2bytes(resp))
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
@@ -260,7 +257,7 @@ class PyStrokeSide:
             if b"\x02\xf0" in buffer and b"\xf2" in buffer:
                 cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
                 if cmd:
-                    self.raw_logger.debug(self.__int2bytes(cmd))
+                    self.raw_logger.debug(_int2bytes(cmd))
                     # Byte Staffing
                     while b"\xf3\x00" in cmd:
                         cmd = cmd.replace(b"\xf3\x00", b"\xf0")
