@@ -127,24 +127,15 @@ class PyStrokeSide:
         return raw_logger
 
     def restore_config(self):
-        if self.config.filename not in os.listdir(self.HOME_DIR):
-            self.config.create()
-            self.logger.info("Create configure file {}".format(self.config.filename))
-        else:
-            if 'address' in self.config['SERVER']:
-                self.address = self.config['SERVER']['address'] if self.config['SERVER']['address'] != '' else None
-            if 'token' in self.config['SERVER']:
-                self.token = self.config['SERVER']['token'] if self.config['SERVER']['token'] != '' else None
+        self.address = self.config.address
+        self.token = self.config.token
 
-            self.total_distance = \
-                self.config['RACE']['total_distance'] if self.config['RACE']['total_distance'] != '' else None
-            self.race_name = self.config['RACE']['race_name'] if self.config['RACE']['race_name'] != '' else None
-            self.race_file = self.config['RACE']['race_file'] if self.config['RACE']['race_file'] != '' else None
+        self.total_distance = self.config.total_distance
+        self.race_name = self.config.race_name
+        self.race_file = self.config.race_file
 
-            for erg_num in self.config['NUMERATION_ERG']:
-                self.erg_line[int(erg_num)] = self.config['NUMERATION_ERG'].as_int(erg_num)
-            for line in self.config["PARTICIPANT_NAME"]:
-                self.participant_name[int(line)] = self.config["PARTICIPANT_NAME"][line]
+        self.erg_line = self.config.erg_line
+        self.participant_name = self.config.participant_name
 
     def write_config(self):
         if self.address is not None:

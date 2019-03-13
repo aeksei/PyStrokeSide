@@ -1,3 +1,4 @@
+import os
 from configobj import ConfigObj
 
 CONFIG_FILE = 'race.conf'
@@ -30,21 +31,53 @@ class Config(ConfigObj):
     def __init__(self, config_file=CONFIG_FILE):
         super().__init__(config_file, write_empty_values=True)
 
+        self.address = ''
+        self.token = ''
+
+        self.total_distance = ''
+        self.race_name = ''
+        self.race_file = ''
+
+        self.erg_line = {}
+
+        self.participant_name = {}
+
+        self.HOME_DIR = os.getcwd()
+        if self.filename not in os.listdir(self.HOME_DIR):
+            self.create()
+        else:
+            self.restore()
+
     def create(self):
         self['SERVER'] = {}
-        self['SERVER']['address'] = ''
-        self['SERVER']['token'] = ''
+        self['SERVER']['address'] = self.address
+        self['SERVER']['token'] = self.token
 
         self['RACE'] = {}
-        self['RACE']['total_distance'] = ''
-        self['RACE']['race_name'] = ''
-        self['RACE']['race_file'] = ''
+        self['RACE']['total_distance'] = self.total_distance
+        self['RACE']['race_name'] = self.race_name
+        self['RACE']['race_file'] = self.race_file
 
         self['NUMERATION_ERG'] = {}
 
         self['PARTICIPANT_NAME'] = {}
 
         self.write()
+
+    def restore(self):
+        if 'address' in self['SERVER']:
+            self.address = self['SERVER']['address'] if self['SERVER']['address'] != '' else None
+        if 'token' in self['SERVER']:
+            self.token = self['SERVER']['token'] if self['SERVER']['token'] != '' else None
+
+        self.total_distance = self['RACE']['total_distance'] if self['RACE']['total_distance'] != '' else None
+        self.race_name = self['RACE']['race_name'] if self['RACE']['race_name'] != '' else None
+        self.race_file = self['RACE']['race_file'] if self['RACE']['race_file'] != '' else None
+
+        for erg_num in self['NUMERATION_ERG']:
+            self.erg_line[int(erg_num)] = self['NUMERATION_ERG'].as_int(erg_num)
+        for line in self["PARTICIPANT_NAME"]:
+            self.participant_name[int(line)] = self["PARTICIPANT_NAME"][line]
 
 
 if __name__ == "__main__":
