@@ -9,6 +9,7 @@ from logging.handlers import RotatingFileHandler
 from config import Config
 from config import _bytes2ascii, _bytes2int, _int2bytes
 
+
 class PyStrokeSide:
     _PATH_USBPCAP = r"C:\Program Files\USBPcap"
     command = r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
@@ -147,9 +148,11 @@ class PyStrokeSide:
         self.config['RACE']['race_name'] = self.race_name
         self.config['RACE']['race_file'] = self.race_file
 
+        self.config['NUMERATION_ERG'] = {}
         for erg, line in self.erg_line.items():
             self.config['NUMERATION_ERG'][str(erg)] = line
 
+        self.config['PARTICIPANT_NAME'] = {}
         for line, name in self.participant_name.items():
             self.config['PARTICIPANT_NAME'][str(line)] = name
 
@@ -163,9 +166,9 @@ class PyStrokeSide:
 
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
-            self.logger.info("send data to server")
 
         self.race_logger.info(data)
+
         if self.timeout != 0:
             time.sleep(self.timeout)
 
@@ -180,6 +183,7 @@ class PyStrokeSide:
         elif cmd[2] == 0xFF:  # name participant
             if line == 0x01:
                 self.participant_name.clear()
+                self.logger.info("Clear participant name")
             self.participant_name[line] = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
 
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
@@ -188,6 +192,7 @@ class PyStrokeSide:
     def set_race_lane_setup_command(self, cmd):
         if cmd[2] == 0x01:
             self.erg_line.clear()
+            self.logger.info("Clear erg line")
         self.erg_line[cmd[2]] = cmd[8]
 
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
@@ -218,11 +223,12 @@ class PyStrokeSide:
                         split=split)
         self.race_data[self.erg_line[src]] = erg_data
 
-        if src == len(self.participant_name):
-            self.send_race_data()
-
         self.logger.info(erg_data)
         self.logger.debug(_int2bytes(resp))
+
+        if src == len(self.participant_name):
+            self.send_race_data()
+            self.logger.info("send data to server")
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
@@ -283,5 +289,6 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
-    #race.sniffing()
+    # race.sniffing()
+
     race.test()

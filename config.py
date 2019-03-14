@@ -67,8 +67,12 @@ class Config(ConfigObj):
     def restore(self):
         if 'address' in self['SERVER']:
             self.address = self['SERVER']['address'] if self['SERVER']['address'] != '' else None
+        else:
+            self.address = None
         if 'token' in self['SERVER']:
             self.token = self['SERVER']['token'] if self['SERVER']['token'] != '' else None
+        else:
+            self.token = None
 
         self.total_distance = self['RACE']['total_distance'] if self['RACE']['total_distance'] != '' else None
         self.race_name = self['RACE']['race_name'] if self['RACE']['race_name'] != '' else None
