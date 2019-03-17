@@ -63,6 +63,7 @@ class Config(ConfigObj):
         self['PARTICIPANT_NAME'] = {}
 
         self.write()
+        self.restore()
 
     def restore(self):
         if 'address' in self['SERVER']:

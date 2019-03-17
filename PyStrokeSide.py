@@ -1,13 +1,13 @@
 import os
 import time
-import logging
+import json
 import socketio
 from datetime import datetime
 from subprocess import Popen, PIPE
-from logging.handlers import RotatingFileHandler
 
 from config import Config
 from config import _bytes2ascii, _bytes2int, _int2bytes
+from loggers import logger, race_logger, raw_logger
 
 
 class PyStrokeSide:
@@ -29,14 +29,13 @@ class PyStrokeSide:
         self.token = None
         self.timeout = 0
 
-        self.logger = self.init_logger()
+        self.logger = logger()
         self.config = Config()
         self.restore_config()
 
         self.race_logger = None
-        if self.race_name is not None:
-            self.init_race_logger(self.race_name)
-        self.raw_logger = self.init_raw_logger()
+        self.new_race_logger()
+        self.raw_logger = raw_logger()
 
         try:
             if self.address is not None:
@@ -52,80 +51,21 @@ class PyStrokeSide:
         if "USBPcap" not in os.listdir(r"C:\Program Files"):
             self.logger.critical('Необходимо установить программу "USBPcap"')
 
-    def init_logger(self):
-        if "LogData" not in os.listdir():
-            os.mkdir("LogData")
-        if "Log" not in os.listdir(os.getcwd() + "\\LogData"):
-            os.mkdir(os.getcwd() + "\\LogData" + "\\Log")
+    def new_race_logger(self):
+        if self.race_file is None:
+            self.race_file = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
 
-        logger = logging.getLogger("PyStrokeSide")
-        logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
-        console.setFormatter(formatter)
-
-        path = os.getcwd() + "\\LogData" + "\\Log"
-        filehandler = RotatingFileHandler(path + "\\PyStrokeSide.log",
-                                          maxBytes=25 * 1024 * 1024,
-                                          backupCount=50)
-
-        filehandler.setLevel(logging.DEBUG)
-        filehandler.setFormatter(formatter)
-
-        logger.addHandler(console)
-        logger.addHandler(filehandler)
-
-        return logger
-
-    def init_race_logger(self, filename=None):
-        if self.race_logger is not None:
+        if self.race_logger is None:
+            self.race_logger = race_logger(self.race_file)
+        else:
             handlers = self.race_logger.handlers[:]
             for handler in handlers:
                 handler.close()
                 self.race_logger.removeHandler(handler)
-
-        self.race_logger = logging.getLogger("race")
-        self.race_logger.setLevel(logging.INFO)
-
-        if "RaceLog" not in os.listdir(os.getcwd() + "\\LogData"):
-            os.mkdir(os.getcwd() + "\\LogData" + "\\RaceLog")
-            self.logger.debug('Create "RaceLog" directory')
-
-        path = os.getcwd() + "\\LogData" + "\\RaceLog" + "\\"
-        if filename is None:
             self.race_file = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
-            self.logger.info("Init Race Log File: {}".format(self.race_file))
-        else:
-            self.logger.info("Restore Race Log File: {}".format(self.race_file))
+            self.race_logger = race_logger(self.race_file)
 
-        racehandler = logging.FileHandler(path + self.race_file)
-        racehandler.setLevel(logging.DEBUG)
-        self.race_logger.addHandler(racehandler)
-
-    def init_raw_logger(self):
-        if "RawCommands" not in os.listdir(os.getcwd() + "\\LogData"):
-            os.mkdir(os.getcwd() + "\\LogData" + "\\RawCommands")
-
-        raw_logger = logging.getLogger("raw")
-        raw_logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-
-        path = os.getcwd() + "\\LogData" + "\\RawCommands" + "\\"
-        filename = "RawCommands.log"
-        filehandler = RotatingFileHandler(path + filename,
-                                          maxBytes=25 * 1024 * 1024,
-                                          backupCount=50)
-
-        filehandler.setLevel(logging.DEBUG)
-        filehandler.setFormatter(formatter)
-
-        raw_logger.addHandler(filehandler)
-
-        return raw_logger
+        self.logger.info("Init Race Log File: {}".format(self.race_file))
 
     def restore_config(self):
         self.address = self.config.address
@@ -164,9 +104,10 @@ class PyStrokeSide:
                     total_distance=self.total_distance,
                     race_data=list(self.race_data.values()))
 
+        data = json.dumps(data)
+
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
-
         self.race_logger.info(data)
 
         if self.timeout != 0:
@@ -204,7 +145,7 @@ class PyStrokeSide:
             self.logger.info("set distance: {}".format(self.total_distance))
             self.logger.debug(_int2bytes(cmd))
 
-            self.init_race_logger()
+            self.new_race_logger()
             self.race_data.clear()
             self.write_config()
 
@@ -270,7 +211,7 @@ class PyStrokeSide:
 
     def test(self):
         file_with_hex_cmd = "test.txt"
-        self.timeout = 0.5
+        self.timeout = 0
         with open(file_with_hex_cmd, "r") as f:
             for line in f:
                 cmd = line[:-1]
