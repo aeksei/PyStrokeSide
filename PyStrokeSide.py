@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import json
 import socketio
@@ -230,6 +231,13 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
-    # race.sniffing()
-
-    race.test()
+    try:
+        race.sniffing()
+    except KeyboardInterrupt:
+        pass
+    except BaseException as e:
+        race.logger.critical("{} {}".format(e, e.args))
+    finally:
+        race.logger.info("Close sniffer")
+        sys.exit()
+    # race.test()
