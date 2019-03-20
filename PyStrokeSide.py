@@ -105,11 +105,11 @@ class PyStrokeSide:
                     total_distance=self.total_distance,
                     race_data=list(self.race_data.values()))
 
-        data = json.dumps(data)
+        self.race_logger.info(json.dumps(data))
 
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
-        self.race_logger.info(data)
+            self.logger.info("send data to server")
 
         if self.timeout != 0:
             time.sleep(self.timeout)
@@ -165,12 +165,12 @@ class PyStrokeSide:
                         split=split)
         self.race_data[self.erg_line[src]] = erg_data
 
-        self.logger.info(erg_data)
+        self.logger.debug(erg_data)
         self.logger.debug(_int2bytes(resp))
 
         if src == len(self.participant_name):
             self.send_race_data()
-            self.logger.info("send data to server")
+            self.logger.info(self.race_data)
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
@@ -211,7 +211,7 @@ class PyStrokeSide:
             buffer = buffer[buffer.find(b"\xf2") + 1:]
 
     def test(self):
-        file_with_hex_cmd = "test.txt"
+        file_with_hex_cmd = "test_team.log"
         self.timeout = 0
         with open(file_with_hex_cmd, "r") as f:
             for line in f:
@@ -232,7 +232,8 @@ class PyStrokeSide:
 if __name__ == "__main__":
     race = PyStrokeSide()
     try:
-        race.sniffing()
+        # race.sniffing()
+        race.test()
     except KeyboardInterrupt:
         pass
     except BaseException as e:
@@ -240,4 +241,4 @@ if __name__ == "__main__":
     finally:
         race.logger.info("Close sniffer")
         sys.exit()
-    # race.test()
+
