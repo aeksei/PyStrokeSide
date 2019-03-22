@@ -37,6 +37,7 @@ class Config(ConfigObj):
         self.total_distance = ''
         self.race_name = ''
         self.race_file = ''
+        self.race_team = 1
 
         self.erg_line = {}
 
@@ -57,6 +58,7 @@ class Config(ConfigObj):
         self['RACE']['total_distance'] = self.total_distance
         self['RACE']['race_name'] = self.race_name
         self['RACE']['race_file'] = self.race_file
+        self['RACE']['race_team'] = self.race_team
 
         self['NUMERATION_ERG'] = {}
 
@@ -78,6 +80,7 @@ class Config(ConfigObj):
         self.total_distance = self['RACE']['total_distance'] if self['RACE']['total_distance'] != '' else None
         self.race_name = self['RACE']['race_name'] if self['RACE']['race_name'] != '' else None
         self.race_file = self['RACE']['race_file'] if self['RACE']['race_file'] != '' else None
+        self.race_team = self['RACE'].as_int('race_team')
 
         for erg_num in self['NUMERATION_ERG']:
             self.erg_line[int(erg_num)] = self['NUMERATION_ERG'].as_int(erg_num)

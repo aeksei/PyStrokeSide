@@ -25,6 +25,7 @@ class PyStrokeSide:
         self.participant_name = {}
         self.total_distance = None
         self.race_data = {}
+        self.race_team = 1
 
         self.address = None
         self.token = None
@@ -75,6 +76,7 @@ class PyStrokeSide:
         self.total_distance = self.config.total_distance
         self.race_name = self.config.race_name
         self.race_file = self.config.race_file
+        self.race_team = self.config.race_team
 
         self.erg_line = self.config.erg_line
         self.participant_name = self.config.participant_name
@@ -88,6 +90,7 @@ class PyStrokeSide:
         self.config['RACE']['total_distance'] = self.total_distance
         self.config['RACE']['race_name'] = self.race_name
         self.config['RACE']['race_file'] = self.race_file
+        self.config['RACE']['race_team'] = self.race_team
 
         self.config['NUMERATION_ERG'] = {}
         for erg, line in self.erg_line.items():
@@ -99,6 +102,15 @@ class PyStrokeSide:
 
         self.config.write()
 
+    def check_team_race(self):
+        count_member = (len(self.participant_name) / len(set(self.participant_name.values())))
+        if count_member in [2, 4, 8]:
+            self.race_team = int(count_member)
+            return True
+        else:
+            self.race_team = 1
+            return False
+
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
                     race_name=self.race_name,
@@ -107,12 +119,15 @@ class PyStrokeSide:
 
         self.race_logger.info(json.dumps(data))
 
+        if self.race_team != 1:
+            print('ololo')
+        self.logger.info(self.race_data)
+
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
             self.logger.info("send data to server")
 
-        if self.timeout != 0:
-            time.sleep(self.timeout)
+        time.sleep(self.timeout)
 
     def set_race_participant_command(self, cmd):
         line = cmd[8]
@@ -148,6 +163,8 @@ class PyStrokeSide:
 
             self.new_race_logger()
             self.race_data.clear()
+            self.check_team_race()
+
             self.write_config()
 
     def update_race_data_response(self, resp):
@@ -170,7 +187,6 @@ class PyStrokeSide:
 
         if src == len(self.participant_name):
             self.send_race_data()
-            self.logger.info(self.race_data)
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
@@ -210,30 +226,11 @@ class PyStrokeSide:
 
             buffer = buffer[buffer.find(b"\xf2") + 1:]
 
-    def test(self):
-        file_with_hex_cmd = "test_team.log"
-        self.timeout = 0
-        with open(file_with_hex_cmd, "r") as f:
-            for line in f:
-                cmd = line[:-1]
-                while "f3 00" in cmd:
-                    cmd = cmd.replace("f3 00", "f0")
-                while "f3 01" in cmd:
-                    cmd = cmd.replace("f3 01", "f1")
-                while "f3 02" in cmd:
-                    cmd = cmd.replace("f3 02", "f2")
-                while "f3 03" in cmd:
-                    cmd = cmd.replace("f3 03", "f3")
-
-                cmd = [int(i, 16) for i in cmd.split(" ")]
-                self.handler(cmd)
-
 
 if __name__ == "__main__":
     race = PyStrokeSide()
     try:
-        # race.sniffing()
-        race.test()
+        race.sniffing()
     except KeyboardInterrupt:
         pass
     except BaseException as e:
