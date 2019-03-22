@@ -4,6 +4,7 @@ import time
 import json
 import socketio
 from datetime import datetime
+from collections import Counter
 from subprocess import Popen, PIPE
 
 from config import Config
@@ -26,6 +27,7 @@ class PyStrokeSide:
         self.total_distance = None
         self.race_data = {}
         self.race_team = 1
+        self.team_data = {}
 
         self.address = None
         self.token = None
@@ -106,10 +108,13 @@ class PyStrokeSide:
         count_member = (len(self.participant_name) / len(set(self.participant_name.values())))
         if count_member in [2, 4, 8]:
             self.race_team = int(count_member)
-            return True
         else:
             self.race_team = 1
-            return False
+
+        self.race_data.clear()
+        self.team_data.clear()
+
+
 
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
@@ -120,8 +125,16 @@ class PyStrokeSide:
         self.race_logger.info(json.dumps(data))
 
         if self.race_team != 1:
-            print('ololo')
-        self.logger.info(self.race_data)
+            for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
+                sub_race_data = [self.race_data[l] for l in range(line, line+self.race_team)]
+                common = Counter(sub_race_data[0])
+                for c in sub_race_data[1:]:
+                    common += Counter(c)
+                team_lines = "-".join([str(line), str(line+self.race_team-1)])
+                self.team_data[team_lines] = common
+            print(self.team_data)
+        else:
+            self.logger.info(self.race_data)
 
         if self.address is not None:
             self.sio.emit('send_data', {'data': data})
@@ -162,13 +175,15 @@ class PyStrokeSide:
             self.logger.debug(_int2bytes(cmd))
 
             self.new_race_logger()
-            self.race_data.clear()
             self.check_team_race()
 
             self.write_config()
 
     def update_race_data_response(self, resp):
         src = resp[3]
+        if src == 0x01 and len(self.race_data) != 0:
+            self.send_race_data()
+
         distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
         time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
         stroke = resp[24]  # stroke
@@ -182,11 +197,8 @@ class PyStrokeSide:
                         split=split)
         self.race_data[self.erg_line[src]] = erg_data
 
-        self.logger.debug(erg_data)
+        self.logger.info(erg_data)
         self.logger.debug(_int2bytes(resp))
-
-        if src == len(self.participant_name):
-            self.send_race_data()
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:

@@ -1,7 +1,7 @@
 import sys
 from PyStrokeSide import PyStrokeSide
 
-TIMEOUT = 1
+TIMEOUT = 0.5
 
 
 def byte_staffing(cmd):
