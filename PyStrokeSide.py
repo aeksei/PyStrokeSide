@@ -114,8 +114,6 @@ class PyStrokeSide:
         self.race_data.clear()
         self.team_data.clear()
 
-
-
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
                     race_name=self.race_name,
@@ -126,13 +124,24 @@ class PyStrokeSide:
 
         if self.race_team != 1:
             for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
-                sub_race_data = [self.race_data[l] for l in range(line, line+self.race_team)]
-                common = Counter(sub_race_data[0])
-                for c in sub_race_data[1:]:
-                    common += Counter(c)
-                team_lines = "-".join([str(line), str(line+self.race_team-1)])
-                self.team_data[team_lines] = common
-            print(self.team_data)
+                sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
+                team_name = sub_race_data[0]['participant_name']
+                team_lines = "-".join([str(line), str(line + self.race_team - 1)])
+
+                team_distance = sum([participant['distance'] for participant in sub_race_data]) / self.race_team
+                team_time = sum([participant['time'] for participant in sub_race_data]) / self.race_team
+                team_stroke = sum([participant['stroke'] for participant in sub_race_data]) / self.race_team
+                team_split = 500 * (team_time / team_distance) if team_distance != 0 else 0
+
+                team_data = dict(line=team_lines,
+                                 participant_name=team_name,
+                                 distance=round(team_distance, 1),
+                                 time=round(team_time, 2),
+                                 stroke=team_stroke,
+                                 split=round(team_split, 2))
+
+                self.team_data[team_lines] = team_data
+            self.logger.info(self.team_data)
         else:
             self.logger.info(self.race_data)
 
@@ -250,4 +259,3 @@ if __name__ == "__main__":
     finally:
         race.logger.info("Close sniffer")
         sys.exit()
-
