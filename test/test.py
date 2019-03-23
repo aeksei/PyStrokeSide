@@ -1,7 +1,7 @@
 import sys
 from PyStrokeSide import PyStrokeSide
 
-TIMEOUT = 0.5
+TIMEOUT = 0
 
 
 def byte_staffing(cmd):
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     race = PyStrokeSide()
 
     try:
-        #test_single_race(race)
+        test_single_race(race)
         test_team_race(race)
     except KeyboardInterrupt:
         pass

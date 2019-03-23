@@ -114,6 +114,29 @@ class PyStrokeSide:
         self.race_data.clear()
         self.team_data.clear()
 
+    def get_team_data(self):
+        for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
+            sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
+            team_name = sub_race_data[0]['participant_name']
+            team_lines = "-".join([str(line), str(line + self.race_team - 1)])
+
+            team_distance = round(sum([participant['distance'] for participant in sub_race_data]) / self.race_team, 1)
+            team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
+            team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
+            team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
+
+            if team_distance > self.total_distance:
+                team_distance = self.total_distance
+
+            team_data = dict(line=team_lines,
+                             participant_name=team_name,
+                             distance=team_distance,
+                             time=team_time,
+                             stroke=team_stroke,
+                             split=team_split)
+
+            self.team_data[team_lines] = team_data
+
     def send_race_data(self):
         data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
                     race_name=self.race_name,
@@ -123,24 +146,8 @@ class PyStrokeSide:
         self.race_logger.info(json.dumps(data))
 
         if self.race_team != 1:
-            for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
-                sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
-                team_name = sub_race_data[0]['participant_name']
-                team_lines = "-".join([str(line), str(line + self.race_team - 1)])
-
-                team_distance = sum([participant['distance'] for participant in sub_race_data]) / self.race_team
-                team_time = sum([participant['time'] for participant in sub_race_data]) / self.race_team
-                team_stroke = sum([participant['stroke'] for participant in sub_race_data]) / self.race_team
-                team_split = 500 * (team_time / team_distance) if team_distance != 0 else 0
-
-                team_data = dict(line=team_lines,
-                                 participant_name=team_name,
-                                 distance=round(team_distance, 1),
-                                 time=round(team_time, 2),
-                                 stroke=team_stroke,
-                                 split=round(team_split, 2))
-
-                self.team_data[team_lines] = team_data
+            self.get_team_data()
+            data['race_data'] = list(self.team_data.values())
             self.logger.info(self.team_data)
         else:
             self.logger.info(self.race_data)
@@ -190,8 +197,6 @@ class PyStrokeSide:
 
     def update_race_data_response(self, resp):
         src = resp[3]
-        if src == 0x01 and len(self.race_data) != 0:
-            self.send_race_data()
 
         distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
         time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
@@ -208,6 +213,9 @@ class PyStrokeSide:
 
         self.logger.info(erg_data)
         self.logger.debug(_int2bytes(resp))
+
+        if src == len(self.participant_name) and len(self.race_data) != 0:
+            self.send_race_data()
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
