@@ -4,8 +4,8 @@ import time
 import json
 import socketio
 from datetime import datetime
-from collections import Counter
-from subprocess import Popen, PIPE
+
+from usbpcapcmd import USBPcapCMD
 
 from config import Config
 from config import _bytes2ascii, _bytes2int, _int2bytes
@@ -13,10 +13,6 @@ from loggers import logger, race_logger, raw_logger
 
 
 class PyStrokeSide:
-    _PATH_USBPCAP = r"C:\Program Files\USBPcap"
-    command = r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
-    LEN_BUF = 1
-
     def __init__(self):
         self.HOME_DIR = os.getcwd()
         self.race_file = None
@@ -33,13 +29,15 @@ class PyStrokeSide:
         self.token = None
         self.timeout = 0
 
-        self.logger = logger()
+        self.logger = logger('PyStrokeSide')
         self.config = Config()
         self.restore_config()
 
         self.race_logger = None
         self.new_race_logger()
         self.raw_logger = raw_logger()
+
+        self.usbpcapcmd = USBPcapCMD()
 
         try:
             if self.address is not None:
@@ -51,9 +49,6 @@ class PyStrokeSide:
             self.logger.critical(
                 'Не удалось установить соединение с сервером. '
                 'Проверьте интернет соединение или работоспособность сервера.')
-
-        if "USBPcap" not in os.listdir(r"C:\Program Files"):
-            self.logger.critical('Необходимо установить программу "USBPcap"')
 
     def new_race_logger(self):
         if self.race_file is None:
@@ -227,30 +222,28 @@ class PyStrokeSide:
         elif cmd[4] == 0x76 and cmd[6] == 0x1d:
             self.set_all_race_params_command(cmd)
 
+    @staticmethod
+    def byte_staffing(cmd):
+        while b"\xf3\x00" in cmd:
+            cmd = cmd.replace(b"\xf3\x00", b"\xf0")
+        while b"\xf3\x01" in cmd:
+            cmd = cmd.replace(b"\xf3\x01", b"\xf1")
+        while b"\xf3\x02" in cmd:
+            cmd = cmd.replace(b"\xf3\x02", b"\xf2")
+        while b"\xf3\x03" in cmd:
+            cmd = cmd.replace(b"\xf3\x03", b"\xf3")
+
+        return cmd
+
     def sniffing(self):
-        os.chdir(self._PATH_USBPCAP)
-        process = Popen(self.command, stdout=PIPE, shell=True)
-        self.logger.info("Open USBPcap")
-
-        self.logger.info("Start sniffing")
-        os.chdir(self.HOME_DIR)
         buffer = b""
-
         while True:
-            buffer += process.stdout.read(self.LEN_BUF)
+            buffer += self.usbpcapcmd.recv()
             if b"\x02\xf0" in buffer and b"\xf2" in buffer:
                 cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
                 if cmd:
                     self.raw_logger.debug(_int2bytes(cmd))
-                    # Byte Staffing
-                    while b"\xf3\x00" in cmd:
-                        cmd = cmd.replace(b"\xf3\x00", b"\xf0")
-                    while b"\xf3\x01" in cmd:
-                        cmd = cmd.replace(b"\xf3\x01", b"\xf1")
-                    while b"\xf3\x02" in cmd:
-                        cmd = cmd.replace(b"\xf3\x02", b"\xf2")
-                    while b"\xf3\x03" in cmd:
-                        cmd = cmd.replace(b"\xf3\x03", b"\xf3")
+                    cmd = self.byte_staffing(cmd)
                     self.handler([c for c in cmd])
 
             buffer = buffer[buffer.find(b"\xf2") + 1:]
@@ -258,12 +251,13 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
-    try:
-        race.sniffing()
-    except KeyboardInterrupt:
-        pass
-    except BaseException as e:
-        race.logger.critical("{} {}".format(e, e.args))
-    finally:
-        race.logger.info("Close sniffer")
-        sys.exit()
+    while True:
+        try:
+            race.sniffing()
+        except KeyboardInterrupt:
+            sys.exit()
+        except BaseException as e:
+            race.logger.critical("{} {}".format(e, e.args))
+        finally:
+            race.logger.info("Close sniffer")
+

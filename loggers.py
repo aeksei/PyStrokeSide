@@ -3,13 +3,13 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 
-def logger():
+def logger(name):
     if "LogData" not in os.listdir():
         os.mkdir("LogData")
     if "Log" not in os.listdir(os.getcwd() + "\\LogData"):
         os.mkdir(os.getcwd() + "\\LogData" + "\\Log")
 
-    logger = logging.getLogger("PyStrokeSide")
+    logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
