@@ -46,7 +46,7 @@ class PyStrokeSide:
                 self.sio.emit('login', {'token': self.token})
                 self.logger.info("Соединение с сервером установлено")
         except socketio.exceptions.ConnectionError:
-            self.logger.critical(
+            self.logger.warning(
                 'Не удалось установить соединение с сервером. '
                 'Проверьте интернет соединение или работоспособность сервера.')
 
@@ -236,7 +236,9 @@ class PyStrokeSide:
         return cmd
 
     def sniffing(self):
+        self.usbpcapcmd.capture()
         buffer = b""
+
         while True:
             buffer += self.usbpcapcmd.recv()
             if b"\x02\xf0" in buffer and b"\xf2" in buffer:
