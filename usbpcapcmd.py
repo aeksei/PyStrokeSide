@@ -1,9 +1,9 @@
-import sys
+import os
 from loggers import logger
 from subprocess import Popen, PIPE
-from scapy.arch.windows import WinProgPath
 
 # r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
+_PATH_USBPCAP = 'C:\\Program Files\\USBPcap\\USBPcapCMD.exe'
 LEN_BUF = 1
 C2_VENDOR_ID = 0x17a4
 
@@ -12,7 +12,10 @@ class USBPcapCMD:
     def __init__(self):
         self.logger = logger('USBPcapCMD')
 
-        self.win = WinProgPath()
+        if not os.path.isfile(_PATH_USBPCAP):
+            self.logger.critical('Not found "USBPcapCMD.exe" in path C:\\Program Files\\USBPcap')
+            exit()
+
         self.usb_interface = None
         self.capture_process = None
 
@@ -31,7 +34,7 @@ class USBPcapCMD:
             exit()
 
     def capture(self):
-        command = ' '.join([self.win.usbpcapcmd.replace(':\\', ':\\"')+'"',
+        command = ' '.join([_PATH_USBPCAP.replace(':\\', ':\\"')+'"',
                             '-d', self.usb_interface[0],
                             '-o', '-',
                             '--devices', self.usb_interface[1]])

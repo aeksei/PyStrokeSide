@@ -236,6 +236,7 @@ class PyStrokeSide:
         return cmd
 
     def sniffing(self):
+        self.usbpcapcmd.find_erg()
         self.usbpcapcmd.capture()
         buffer = b""
 
