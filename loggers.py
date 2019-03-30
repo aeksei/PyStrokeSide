@@ -15,7 +15,7 @@ def logger(name):
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 
     console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
+    console.setLevel(logging.DEBUG)
     console.setFormatter(formatter)
 
     path = os.getcwd() + "\\LogData" + "\\Log"

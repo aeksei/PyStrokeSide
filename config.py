@@ -29,7 +29,7 @@ def _int2bytes(int_list):
 
 class Config(ConfigObj):
     def __init__(self, config_file=CONFIG_FILE):
-        super().__init__(config_file, write_empty_values=True)
+        super().__init__(config_file, write_empty_values=True, encoding='utf8')
 
         self.address = ''
         self.token = ''

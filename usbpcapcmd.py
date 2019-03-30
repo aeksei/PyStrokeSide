@@ -37,7 +37,8 @@ class USBPcapCMD:
         command = ' '.join([_PATH_USBPCAP.replace(':\\', ':\\"')+'"',
                             '-d', self.usb_interface[0],
                             '-o', '-',
-                            '--devices', self.usb_interface[1]])
+                            # '--devices', self.usb_interface[1]])
+                            '-A'])
         self.logger.debug(command)
         self.capture_process = Popen(command, stdout=PIPE, shell=True)
         self.logger.info('Start capture traffic')

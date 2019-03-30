@@ -93,6 +93,8 @@ class PyStrokeSide:
         for erg, line in self.erg_line.items():
             self.config['NUMERATION_ERG'][str(erg)] = line
 
+        # UNICODE
+        # restore from file
         self.config['PARTICIPANT_NAME'] = {}
         for line, name in self.participant_name.items():
             self.config['PARTICIPANT_NAME'][str(line)] = name
@@ -112,16 +114,19 @@ class PyStrokeSide:
     def get_team_data(self):
         for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
             sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
+            print(sub_race_data[0])
             team_name = sub_race_data[0]['participant_name']
             team_lines = "-".join([str(line), str(line + self.race_team - 1)])
 
             team_distance = round(sum([participant['distance'] for participant in sub_race_data]) / self.race_team, 1)
-            team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
-            team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
-            team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
-
             if team_distance > self.total_distance:
                 team_distance = self.total_distance
+            if team_distance < self.total_distance:
+                team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
+            else:
+                team_time = self.team_data[team_lines]['time']
+            team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
+            team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
 
             team_data = dict(line=team_lines,
                              participant_name=team_name,
@@ -160,27 +165,28 @@ class PyStrokeSide:
 
             self.logger.info("Start new race: {}".format(self.race_name))
             self.logger.debug(_int2bytes(cmd))
-
+        # UNICODE
         elif cmd[2] == 0xFF:  # name participant
-            if line == 0x01:
+            if line == list(self.participant_name)[0]:
                 self.participant_name.clear()
                 self.logger.info("Clear participant name")
-            self.participant_name[line] = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
+            self.participant_name[line] = _bytes2ascii(cmd[9:9 + cmd[7] - 2]).encode('utf-8').decode('cp1251')
 
             self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
             self.logger.debug(_int2bytes(cmd))
 
     def set_race_lane_setup_command(self, cmd):
-        if cmd[2] == 0x01:
-            self.erg_line.clear()
-            self.logger.info("Clear erg line")
+        if len(self.erg_line):
+            if cmd[2] == list(self.erg_line)[0]:
+                self.erg_line.clear()
+                self.logger.info("Clear erg line")
         self.erg_line[cmd[2]] = cmd[8]
 
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
         self.logger.debug(_int2bytes(cmd))
 
     def set_all_race_params_command(self, cmd):
-        if cmd[2] == 0x01:
+        if cmd[2] == list(self.erg_line)[0]:
             self.total_distance = _bytes2int(cmd[30:34])
             self.logger.info("set distance: {}".format(self.total_distance))
             self.logger.debug(_int2bytes(cmd))
@@ -209,7 +215,7 @@ class PyStrokeSide:
         self.logger.info(erg_data)
         self.logger.debug(_int2bytes(resp))
 
-        if src == len(self.participant_name) and len(self.race_data) != 0:
+        if src == list(self.erg_line)[-1] and len(self.race_data) != 0:
             self.send_race_data()
 
     def handler(self, cmd):
@@ -254,6 +260,8 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
+    race.sniffing()
+    """
     while True:
         try:
             race.sniffing()
@@ -263,4 +271,5 @@ if __name__ == "__main__":
             race.logger.critical("{} {}".format(e, e.args))
         finally:
             race.logger.info("Close sniffer")
+    """
 
