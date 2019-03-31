@@ -120,15 +120,19 @@ class PyStrokeSide:
 
             team_distance = round(sum([participant['distance'] for participant in sub_race_data]) / self.race_team, 1)
             team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
-            self.logger.debug((team_distance, team_time))
-            self.logger.debug(self.finish_time[line])
             team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
             team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
 
-            if team_distance > self.total_distance:
+            if team_distance > self.total_distance and self.finish_time[line] == 0:
+                self.finish_time[line] = team_time
+
+            if self.finish_time[line] != 0:
+                team_time = self.finish_time[line]
                 team_distance = self.total_distance
-                if self.finish_time[line] == 0:
-                    self.finish_time[line] = team_time
+                team_split = round(500 * (team_time/team_distance), 2)
+
+            # self.logger.info((team_distance, team_time))
+            # self.logger.info(self.finish_time[line])
 
             team_data = dict(line=team_lines,
                              participant_name=team_name,
