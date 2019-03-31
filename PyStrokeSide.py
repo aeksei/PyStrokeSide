@@ -24,6 +24,7 @@ class PyStrokeSide:
         self.race_data = {}
         self.race_team = 1
         self.team_data = {}
+        self.finish_time = {}
 
         self.address = None
         self.token = None
@@ -37,7 +38,7 @@ class PyStrokeSide:
         self.new_race_logger()
         self.raw_logger = raw_logger()
 
-        self.usbpcapcmd = USBPcapCMD()
+        self.usbpcapcmd = None
 
         try:
             if self.address is not None:
@@ -114,19 +115,20 @@ class PyStrokeSide:
     def get_team_data(self):
         for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
             sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
-            print(sub_race_data[0])
             team_name = sub_race_data[0]['participant_name']
             team_lines = "-".join([str(line), str(line + self.race_team - 1)])
 
             team_distance = round(sum([participant['distance'] for participant in sub_race_data]) / self.race_team, 1)
-            if team_distance > self.total_distance:
-                team_distance = self.total_distance
-            if team_distance < self.total_distance:
-                team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
-            else:
-                team_time = self.team_data[team_lines]['time']
+            team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
+            self.logger.debug((team_distance, team_time))
+            self.logger.debug(self.finish_time[line])
             team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
             team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
+
+            if team_distance > self.total_distance:
+                team_distance = self.total_distance
+                if self.finish_time[line] == 0:
+                    self.finish_time[line] = team_time
 
             team_data = dict(line=team_lines,
                              participant_name=team_name,
@@ -160,7 +162,7 @@ class PyStrokeSide:
 
     def set_race_participant_command(self, cmd):
         line = cmd[8]
-        if cmd[2] == 0x01 and line == 0:  # name race
+        if cmd[2] == list(self.erg_line)[0] and line == 0:  # name race
             self.race_name = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
 
             self.logger.info("Start new race: {}".format(self.race_name))
@@ -193,6 +195,7 @@ class PyStrokeSide:
 
             self.new_race_logger()
             self.check_team_race()
+            self.finish_time = {line: 0 for line in self.participant_name}
 
             self.write_config()
 
@@ -260,6 +263,7 @@ class PyStrokeSide:
 
 if __name__ == "__main__":
     race = PyStrokeSide()
+    race.usbpcapcmd = USBPcapCMD()
     race.sniffing()
     """
     while True:
