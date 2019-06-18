@@ -4,7 +4,6 @@ import time
 import json
 import socketio
 from datetime import datetime
-
 from usbpcapcmd import USBPcapCMD
 
 from config import Config
