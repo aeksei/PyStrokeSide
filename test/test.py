@@ -1,5 +1,5 @@
 import sys
-from PyStrokeSide import PyStrokeSide
+from pyrow.PyStrokeSide import PyStrokeSide
 
 TIMEOUT = 0
 
