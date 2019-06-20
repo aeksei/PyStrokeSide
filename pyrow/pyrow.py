@@ -19,6 +19,8 @@ import sys
 import usb.core
 import usb.util
 from usb import USBError
+import usb.backend.libusb1
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb/libusb-1.0.dll")
 
 from pyrow.csafe import csafe_cmd
 
@@ -131,7 +133,7 @@ def find():
     Returns list of pyusb Devices which are ergs.
     """
     try:
-        ergs = usb.core.find(find_all=True, idVendor=C2_VENDOR_ID)
+        ergs = usb.core.find(find_all=True, idVendor=C2_VENDOR_ID, backend=backend)
     # Checks for USBError 16: Resource busy
     except USBError as e:
         if e.errno != 16:

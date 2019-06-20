@@ -47,9 +47,16 @@ def write(arguments):
 
     #loop through all arguments
     while i < len(arguments):
-
+        extended_frame = False
         arg = arguments[i]
-        cmdprop = csafe_dic.cmds[arg]
+        if isinstance(arg, list):
+            # for Extended Frame Format
+            extended_frame = True
+            dst = arg[0]
+            src = arg[1]
+            cmdprop = [arg[2], [1]*arg[2]]
+        else:
+            cmdprop = csafe_dic.cmds[arg]
         command = []
 
         #load variables if command is a Long Command
@@ -123,7 +130,10 @@ def write(arguments):
     message.append(checksum)
 
     #start & stop frames
-    message.insert(0, csafe_dic.Standard_Frame_Start_Flag)
+    if extended_frame:
+        message.insert(0, csafe_dic.Extended_Frame_Start_Flag)
+    else:
+        message.insert(0, csafe_dic.Standard_Frame_Start_Flag)
     message.append(csafe_dic.Stop_Frame_Flag)
 
     #check for frame size (96 bytes)
