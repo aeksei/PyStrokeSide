@@ -217,3 +217,8 @@ race_cmds[0x14] = 'configure_workout'
 race_cmds[0xD7] = 'latch_tick_time'
 race_cmds[0x0D] = 'set_race_start_params'
 race_cmds[0x33] = 'update_race_data'
+# TODO unknown commands
+race_cmds[0x8D] = 'workout_state'  # temp from this dict
+race_cmds[0x99] = 'bar'  # ????
+race_cmds[0x6A] = 'bar_bar'  # ????
+race_cmds[0x35] = 'barbar_bar'  # time 0x77
