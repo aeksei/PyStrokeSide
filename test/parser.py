@@ -1,5 +1,6 @@
-import os
 from datetime import datetime
+import pandas as pd
+from pyrow.csafe import csafe_dic
 
 
 def parse_update_race_data(file):
@@ -41,35 +42,58 @@ def get_raw_data(file, start="1900-01-01 00:00:00,000", finish="2100-01-01 00:00
     return data
 
 
+def raw_cmd_to_csv(file, save_file=False):
+    """
+    Convert raw commands to Pandas DataFrame
+    save_file: True if need save to csv
+
+    :return: Pandas DataFrame
+    """
+
+    columns = ['dst', 'src', 'common_cmd', 'len', 'id_cmd', 'cmd', 'data']
+    df = pd.DataFrame(columns=columns)
+
+    with open(file, 'r') as f:
+        for s in f:
+            raw_cmd = s[:-1].split(" ")
+
+            line = {}
+            i = 2
+            line['dst'] = raw_cmd[i]
+
+            i += 1  # 3
+            line['src'] = raw_cmd[i]
+
+            i += 1  # 4
+            # skip status answer
+            if raw_cmd[i] == '81' or raw_cmd[i] == '01':
+                i += 1
+            line['common_cmd'] = raw_cmd[i]
+
+            i += 1
+            line['len'] = raw_cmd[i]
+
+            i += 1
+            line['id_cmd'] = raw_cmd[i]
+            line['cmd'] = csafe_dic.race_cmds[int(line['id_cmd'], 16)]
+
+            i += 1
+            line['data'] = raw_cmd[i:-2]
+
+            df = df.append(line, ignore_index=True)
+
+    if save_file:
+        df.to_csv("pandas\\" + file, columns=columns)
+
+    return df
+
+
 if __name__ == "__main__":
     path = "test\\LogData\\RawCommands\\"
     LOG_FILE = path + "RawCommands.log"
-    # data_log = parse_update_race_data(LOG_FILE)
 
-    #LOG_FILE = "tmp.txt"
-    #data_log = parse_set_race_lane_setup(LOG_FILE)
+    raw_cmd_to_csv('team.race', save_file=True)
 
-    """
-    with open("tmp.txt", "w") as f:
-        start_race = datetime.strptime("2019-02-24 10:59:36,862", "%Y-%m-%d %H:%M:%S,%f")
-        finish_race = datetime.strptime("2019-02-24 11:08:49,645", "%Y-%m-%d %H:%M:%S,%f")
 
-        for data in data_log:
-            time = data[0]
-            dt = datetime.strptime(time, "%Y-%m-%d %H:%M:%S,%f")
-            if start_race <= dt <= finish_race:
-                resp = [int(i) for i in data[1]]
-                hex_cmd = " ".join([hex(c)[2:].rjust(2, "0") for c in resp])
-                f.write(hex_cmd)
-                f.write("\n")
-    """
-
-    with open(LOG_FILE, 'r') as raw_log:
-        data = get_raw_data(raw_log)
-
-        with open('test\\tmp.txt', 'w') as f:
-            for d in data:
-                f.write(d)
-                f.write('\n')
 
 
