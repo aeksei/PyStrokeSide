@@ -132,6 +132,8 @@ def write(arguments):
 
     #start & stop frames
     if extended_frame:
+        message.insert(0, src)
+        message.insert(0, dst)
         message.insert(0, csafe_dic.Extended_Frame_Start_Flag)
     else:
         message.insert(0, csafe_dic.Standard_Frame_Start_Flag)
@@ -142,8 +144,11 @@ def write(arguments):
         warn("Message is too long: " + len(message))
 
     #report IDs
-    maxmessage = max(len(message) + 1, maxresponse)
-
+    if extended_frame:
+        maxmessage = 121
+    else:
+        maxmessage = max(len(message) + 1, maxresponse)
+    #
     if maxmessage <= 21:
         message.insert(0, 0x01)
         message += [0] * (21 - len(message))
@@ -276,7 +281,3 @@ def read(transmission):
         response[msgprop[0]] = result
 
     return response
-
-
-if __name__ == "__main__":
-    write([[0xff, 0x00, 'CSAFE_SETPMCFG_CMD', 0x05], 0xe1, 0x0b, 0x02, 0x00, 0x00])
