@@ -451,7 +451,3 @@ class PyErg(object):
 
         #convers byte array to response dictionary
         return response
-
-
-if __name__ == "__main__":
-    find()

@@ -6,9 +6,9 @@ class PyErgRace(pyrow.PyErg):
     """
     Manages low-level erg communication for race
     """
-    serial_num = None
-    erg_num = 0xFD
-    race_line = None
+    _serial_num = None
+    _erg_num = 0xFD
+    _race_line = None
 
     def reset_erg_num(self):
         """
@@ -16,84 +16,72 @@ class PyErgRace(pyrow.PyErg):
         :return:
         """
         data = csafe_dic.cmds['reset_erg_num']
-        message = [[self.erg_num, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message = [[0xFF, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
-        self.send(message=message)
+
+        self.send(message)
         # self.id_erg = {}
 
     def get_serial_num(self, destination=0xFD):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_get_serial_num
-        :return: serial numder of erg
+        :return: serial number of erg [0xFF, 0xFF, 0xFF, 0xFF]
         """
-        raw_command = "02 f0 fd 00 7e 01 82 fd f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
+        data = csafe_dic.cmds['get_serial_num']
+        message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
         resp = []
         while not resp:
-            resp = self.send(message=message,
-                             destination=destination,
-                             source=csafe_command["source"],
-                             count_bytes=csafe_command["data_byte_command"])
+            resp = self.send(message)
+        # TODO return format
         return to_hex.list_to_hex_str(resp['CSAFE_GETPMCFG_CMD'][2:])
 
-    def set_erg_num(self, serial_num=None):
+    def set_erg_num(self, serial_num, erg_num):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_erg_num
         :return:
         """
 
-        if serial_num is None:
-            self.get_serial_num()
-            serial_num = self.get_serial_num()
-            destination = 0xFD
-        else:
-            destination = 0xFF
+        data = csafe_dic.cmds['set_erg_num'][:-1]
+        data.extend(serial_num)
+        data.append(erg_num)
 
-        if serial_num not in self.id_erg:
-            self.id_erg[serial_num] = len(self.id_erg) + 1
+        destination = 0xFD if erg_num is 0x01 else 0xFF
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
 
-        new_destination = self.id_erg[serial_num]
-        # raw_command = "02 f0 fd 00 76 07 10 05 19 a6 84 88 01 d6 f2"
-        raw_command = "02 f0 fd 00 76 07 10 05 " + serial_num + " " + str(new_destination) + " d6 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        self.send(message)
 
-        # raw_command = "02 f0 01 00 7e 06 50 04 9f f2"
-        raw_command = "02 f0 01 00 7e 06 50 04 " + serial_num + " 9f f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=new_destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+    def set_erg_num_check(self, destination, serial_num):
+        """
+        get_erg_num_confirm
+        :param destination:
+        :param serial_num:
+        :return: confirm set erg num
+        """
 
-    def set_screen_state(self, destination=0xff, state=0x0e):
+        data = csafe_dic.cmds['get_erg_num_confirm'][:-1]
+        data.extend(serial_num)
+
+        message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.send(message)
+
+    def set_screen_state(self, destination, state):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_screen_state@@YAFGEE@Z(guessed Arg1,Arg2,Arg3)
 
         :return:
         """
-        # raw_command = "02 f0 ff 00 76 04 13 02 02 0e 6f f2"
-        raw_command = "02 f0 ff 00 76 04 13 02 02 " + str(hex(state)[2:]) + " 6f f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        data = csafe_dic.cmds['set_screen_state'][:-1]
+        data.append(state)
+
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.send(message)
 
     def close(self):
         raw_command = "02 f0 01 00 76 04 13 02 02 06 67 f2"
