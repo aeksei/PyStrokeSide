@@ -281,3 +281,4 @@ def read(transmission):
         response[msgprop[0]] = result
 
     return response
+

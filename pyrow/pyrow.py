@@ -20,10 +20,11 @@ import usb.core
 import usb.util
 from usb import USBError
 import usb.backend.libusb1
-backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb/libusb-1.0.dll")
 
 from pyrow.csafe import csafe_cmd
 
+
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb/libusb-1.0.dll")
 C2_VENDOR_ID = 0x17a4
 MIN_FRAME_GAP = .050 #in seconds
 INTERFACE = 0
@@ -450,3 +451,7 @@ class PyErg(object):
 
         #convers byte array to response dictionary
         return response
+
+
+if __name__ == "__main__":
+    find()
