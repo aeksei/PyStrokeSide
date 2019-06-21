@@ -54,7 +54,8 @@ def write(arguments):
             extended_frame = True
             dst = arg[0]
             src = arg[1]
-            cmdprop = [arg[2], [1]*arg[2]]
+            cmdprop = csafe_dic.cmds[arg[2]]
+            cmdprop.append([1]*arg[3])
         else:
             cmdprop = csafe_dic.cmds[arg]
         command = []
@@ -275,3 +276,7 @@ def read(transmission):
         response[msgprop[0]] = result
 
     return response
+
+
+if __name__ == "__main__":
+    write([[0xff, 0x00, 'CSAFE_SETPMCFG_CMD', 0x05], 0xe1, 0x0b, 0x02, 0x00, 0x00])
