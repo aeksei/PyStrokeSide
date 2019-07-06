@@ -150,13 +150,13 @@ class PyErg(object):
     Manages low-level erg communication
     """
 
-    raw_logger = loggers.raw_logger()
-
     def __init__(self, erg):
         """
         Configures usb connection and sets erg value
         """
         from warnings import warn
+
+        self.raw_logger = loggers.raw_logger()
 
         if sys.platform != 'win32':
             try:
@@ -189,6 +189,7 @@ class PyErg(object):
         iface = configuration[(0, 0)]
         self.inEndpoint = iface[0].bEndpointAddress
         self.outEndpoint = iface[1].bEndpointAddress
+        self.raw_logger.debug("Erg is configure")
 
         self.__lastsend = datetime.datetime.now()
 
@@ -443,14 +444,14 @@ class PyErg(object):
                 raise ConnectionError("USB device disconected")
         #records time when message was sent
         self.__lastsend = datetime.datetime.now()
-        self.raw_logger.debug(csafe_cmd.cmd2hex(csafe))  # logging raw csafe command
+        self.raw_logger.info(csafe_cmd.cmd2hex(csafe))  # logging raw csafe command
 
         response = []
         while not response:
             try:
                 #recieves byte array from erg
                 transmission = self.erg.read(self.inEndpoint, length, timeout=100)
-                self.raw_logger.debug(csafe_cmd.cmd2hex(transmission))  # logging raw csafe response
+                self.raw_logger.info(csafe_cmd.cmd2hex(transmission))  # logging raw csafe response
                 response = csafe_cmd.read(transmission)
             except Exception as e:
                 return response

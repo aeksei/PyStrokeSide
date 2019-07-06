@@ -53,7 +53,7 @@ def raw_logger():
         os.mkdir(os.getcwd() + "\\LogData" + "\\RawCommands")
 
     raw_logger = logging.getLogger("raw")
-    raw_logger.setLevel(logging.DEBUG)
+    raw_logger.setLevel(logging.INFO)
 
     formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 

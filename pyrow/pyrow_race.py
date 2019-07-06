@@ -1,6 +1,8 @@
 from pyrow import pyrow
 from pyrow.csafe import csafe_dic
 
+is_debug = False
+
 
 class PyErgRace(pyrow.PyErg):
     """
@@ -12,6 +14,13 @@ class PyErgRace(pyrow.PyErg):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if is_debug:
+            import logging
+            self.raw_logger.setLevel(logging.DEBUG)
+
+            console = logging.StreamHandler()
+            console.setLevel(logging.DEBUG)
+            self.raw_logger.addHandler(console)
 
     def reset_erg_num(self):
         """
@@ -20,7 +29,7 @@ class PyErgRace(pyrow.PyErg):
         """
         csafe_cmd = 'CSAFE_GETPMCFG_CMD'
         cmd = 'reset_erg_num'
-        self.raw_logger.info('Erg {:02X} {}'.format(self._erg_num, cmd))
+        self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
 
         data = csafe_dic.cmds[cmd]
         message = [[0xFF, 0x00, csafe_cmd, len(data)]]
