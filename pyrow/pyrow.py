@@ -19,12 +19,12 @@ import sys
 import usb.core
 import usb.util
 from usb import USBError
-import usb.backend.libusb1
+import usb.backend.libusb0
+backend = usb.backend.libusb0.get_backend(find_library=lambda x: "C:\\Users\\aeksei\\PycharmProjects\\PyStrokeSide\\libusb\\libusb0.dll")
 
 from pyrow.csafe import csafe_cmd
+import loggers
 
-
-backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb/libusb-1.0.dll")
 C2_VENDOR_ID = 0x17a4
 MIN_FRAME_GAP = .050 #in seconds
 INTERFACE = 0
@@ -135,6 +135,7 @@ def find():
     """
     try:
         ergs = usb.core.find(find_all=True, idVendor=C2_VENDOR_ID, backend=backend)
+        #ergs = usb.core.find(find_all=True, idVendor=C2_VENDOR_ID)
     # Checks for USBError 16: Resource busy
     except USBError as e:
         if e.errno != 16:
@@ -148,6 +149,9 @@ class PyErg(object):
     """
     Manages low-level erg communication
     """
+
+    raw_logger = loggers.raw_logger()
+
     def __init__(self, erg):
         """
         Configures usb connection and sets erg value
@@ -164,12 +168,14 @@ class PyErg(object):
             except:
                 raise
 
+        # ?????????
         #Claim interface (Needs Testing To See If Necessary)
-        usb.util.claim_interface(erg, INTERFACE)
+        #usb.util.claim_interface(erg, INTERFACE)
+        # ?????????
 
         #Linux throws error, reason unknown
         try:
-            erg.set_configuration() #required to configure USB connection
+            erg.set_configuration(1) #required to configure USB connection
             #Ubuntu Linux returns 'usb.core.USBError: Resource busy' but rest of code still works
         except USBError as e:
             warn("DEBUG: usb error whilst setting configuration, {}".format(e))
@@ -427,27 +433,31 @@ class PyErg(object):
 
         #convert message to byte array
         csafe = csafe_cmd.write(message)
+
         #sends message to erg and records length of message
         try:
-            length = self.erg.write(self.outEndpoint, csafe, timeout=2000)
+            length = self.erg.write(self.outEndpoint, csafe, timeout=100)
         # Checks for USBError 16: Resource busy
         except USBError as e:
             if e.errno != 19:
                 raise ConnectionError("USB device disconected")
         #records time when message was sent
         self.__lastsend = datetime.datetime.now()
+        self.raw_logger.debug(csafe_cmd.cmd2hex(csafe))  # logging raw csafe command
 
         response = []
         while not response:
             try:
                 #recieves byte array from erg
-                transmission = self.erg.read(self.inEndpoint, length, timeout=2000)
+                transmission = self.erg.read(self.inEndpoint, length, timeout=100)
+                self.raw_logger.debug(csafe_cmd.cmd2hex(transmission))  # logging raw csafe response
                 response = csafe_cmd.read(transmission)
             except Exception as e:
-                raise e
+                return response
+                # raise e
                 #Replace with error or let error trigger?
                 #No message was recieved back from erg
-                # return []
+
 
         #convers byte array to response dictionary
         return response

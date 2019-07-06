@@ -10,17 +10,23 @@ class PyErgRace(pyrow.PyErg):
     _erg_num = 0xFD
     _race_line = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def reset_erg_num(self):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_reset_erg_num
         :return:
         """
-        data = csafe_dic.cmds['reset_erg_num']
-        message = [[0xFF, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'reset_erg_num'
+        self.raw_logger.info('Erg {:02X} {}'.format(self._erg_num, cmd))
+
+        data = csafe_dic.cmds[cmd]
+        message = [[0xFF, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
 
         self.send(message)
-        # self.id_erg = {}
 
     def get_serial_num(self, destination=0xFD):
         """
@@ -30,12 +36,8 @@ class PyErgRace(pyrow.PyErg):
         data = csafe_dic.cmds['get_serial_num']
         message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
         message.extend(data)
-
-        resp = []
-        while not resp:
-            resp = self.send(message)
         # TODO return format
-        return to_hex.list_to_hex_str(resp['CSAFE_GETPMCFG_CMD'][2:])
+        return self.send(message)
 
     def set_erg_num(self, serial_num, erg_num):
         """
