@@ -55,9 +55,9 @@ cmds['CSAFE_SETPOWER_CMD'] = [0x34, [2, 1]]  # Stroke Watts, Units
 cmds['CSAFE_GETCAPS_CMD'] = [0x70, [1, ]]  # Capability Code
 
 # Extended Long command
-cmds['CSAFE_SETPMCFG_CMD'] = [0x76, ]
-cmds['CSAFE_GETPMCFG_CMD'] = [0x7e, ]
-cmds['CSAFE_SETPMTIME_CMD'] = [0x77, ]
+cmds['CSAFE_SETPMCFG_CMD'] = [0x76, []]
+cmds['CSAFE_GETPMCFG_CMD'] = [0x7e, []]
+cmds['CSAFE_SETPMTIME_CMD'] = [0x77, []]
 
 cmds['reset_erg_num'] = [0xe1, 0x0b, 0x02, 0x00, 0x00]
 cmds['get_serial_num'] = [0x82]

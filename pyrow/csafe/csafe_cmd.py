@@ -8,6 +8,9 @@
 from warnings import warn
 from pyrow.csafe import csafe_dic
 
+def cmd2hex(list_int):
+    return ' '.join(['{:02X}'.format(i) for i in list_int])
+
 def __int2bytes(numbytes, integer):
     if not 0 <= integer <= 2 ** (8 * numbytes):
         raise ValueError("Integer is outside the allowable range")
@@ -55,7 +58,7 @@ def write(arguments):
             dst = arg[0]
             src = arg[1]
             cmdprop = csafe_dic.cmds[arg[2]]
-            cmdprop.append([1]*arg[3])
+            cmdprop[1] = [1] * arg[3]
         else:
             cmdprop = csafe_dic.cmds[arg]
         command = []
@@ -204,8 +207,8 @@ def read(transmission):
     startflag = transmission[1]
 
     if startflag == csafe_dic.Extended_Frame_Start_Flag:
-        #destination = transmission[2]
-        #source = transmission[3]
+        destination = transmission[2]
+        source = transmission[3]
         j = 4
     elif startflag == csafe_dic.Standard_Frame_Start_Flag:
         j = 2
@@ -251,7 +254,7 @@ def read(transmission):
         #if wrapper command then gets command in wrapper
         if msgprop[0] == 'CSAFE_SETUSERCFG1_CMD':
             wrapper = message[k - 2] << 8
-            wrapend = k  + bytecount - 1
+            wrapend = k + bytecount - 1
             if bytecount: #If wrapper length != 0
                 msgcmd = wrapper | message[k]
                 msgprop = csafe_dic.resp[msgcmd]
@@ -270,6 +273,12 @@ def read(transmission):
         #checking that the recieved data byte is the expected length, sanity check
         if abs(sum(msgprop[1])) != 0 and bytecount != abs(sum(msgprop[1])):
             warn("Warning: bytecount is an unexpected length")
+
+        if msgprop[0] == 'CSAFE_SETPMCFG_CMD':
+            msgprop[1] = [1, ] * bytecount
+
+        if msgprop[0] == 'CSAFE_GETPMCFG_CMD':
+            msgprop[1] = [1, ] * bytecount
 
         #extract values
         for numbytes in msgprop[1]:
