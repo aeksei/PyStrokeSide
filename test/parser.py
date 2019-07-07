@@ -26,18 +26,26 @@ def parse_set_race_lane_setup(file):
 
 
 def get_raw_data(file, start="1900-01-01 00:00:00,000", finish="2100-01-01 00:00:00,000"):
+    """
+    Example: pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.txt', header=False, index=False)
+    :param file:
+    :param start:
+    :param finish:
+    :return:
+    """
     data = []
     start_date = datetime.strptime(start, "%Y-%m-%d %H:%M:%S,%f")
     finish_date = datetime.strptime(finish, "%Y-%m-%d %H:%M:%S,%f")
-    for line in file:
-        if line[-1] == '\n':
-            line = line[:-1]
-        if "DEBUG" in line:
-            time = line.split(" raw          DEBUG    ")[0]
-            cmd = line.split(" raw          DEBUG    ")[1]
-            dt = datetime.strptime(time, "%Y-%m-%d %H:%M:%S,%f")
-            if start_date <= dt <= finish_date:
-                data.append(cmd)
+    with open(file, "r") as f:
+        for line in f:
+            if line[-1] == '\n':
+                line = line[:-1]
+            if "DEBUG" in line:
+                time = line.split(" raw          DEBUG    ")[0]
+                cmd = line.split(" raw          DEBUG    ")[1]
+                dt = datetime.strptime(time, "%Y-%m-%d %H:%M:%S,%f")
+                if start_date <= dt <= finish_date:
+                    data.append(cmd)
 
     return data
 
@@ -46,6 +54,8 @@ def raw_cmd_to_csv(file, save_file=False):
     """
     Convert raw commands to Pandas DataFrame
     save_file: True if need save to csv
+
+    example: raw_cmd_to_csv('team.race', save_file=True)
 
     :return: Pandas DataFrame
     """
@@ -89,10 +99,13 @@ def raw_cmd_to_csv(file, save_file=False):
 
 
 if __name__ == "__main__":
-    path = "test\\LogData\\RawCommands\\"
+    path = "LogData\\RawCommands\\"
     LOG_FILE = path + "RawCommands.log"
 
-    raw_cmd_to_csv('team.race', save_file=True)
+    raw_cmd_to_csv('set_up_ergs.txt', save_file=True)
+
+
+
 
 
 

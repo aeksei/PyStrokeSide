@@ -61,7 +61,7 @@ cmds['CSAFE_SETPMTIME_CMD'] = [0x77, []]
 
 cmds['reset_erg_num'] = [0xe1, 0x0b, 0x02, 0x00, 0x00]
 cmds['get_serial_num'] = [0x82]
-cmds['set_erg_num'] = [0x10, 0x05, [4, 1]]  # add serial_num and new address
+cmds['set_erg_num'] = [0x10, 0x05, [4, 1]]  # serial_num, new address
 cmds['get_erg_num_confirm'] = [0x50, 0x04, [4, ]]  # add serial_num
 cmds['set_screen_state'] = [0x13, 0x02, 0x02, [1]]  # state
 cmds['VRPM3Race_100012D0'] = [0x80]
@@ -189,7 +189,7 @@ race_cmds = {}
 race_cmds[0xE1] = 'reset_erg_num'
 race_cmds[0x82] = 'get_serial_num'
 race_cmds[0x10] = 'set_erg_num'
-race_cmds[0x50] = 'set_erg_num_check'
+race_cmds[0x50] = 'get_erg_num_confirm'
 race_cmds[0x13] = 'set_screen_state'
 race_cmds[0x80] = 'VRPM3Race_100012D0'
 race_cmds[0x9A] = 'call_10001210'

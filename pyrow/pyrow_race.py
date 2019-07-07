@@ -1,7 +1,11 @@
 from pyrow import pyrow
 from pyrow.csafe import csafe_dic
+from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
 
-is_debug = False
+is_debug = True
+
+bytes2int = __bytes2int
+int2bytes = __int2bytes
 
 
 class PyErgRace(pyrow.PyErg):
@@ -29,12 +33,11 @@ class PyErgRace(pyrow.PyErg):
         """
         csafe_cmd = 'CSAFE_GETPMCFG_CMD'
         cmd = 'reset_erg_num'
-        self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
-
         data = csafe_dic.cmds[cmd]
         message = [[0xFF, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
 
+        self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
         self.send(message)
 
     def get_serial_num(self, destination=0xFD):
@@ -42,29 +45,41 @@ class PyErgRace(pyrow.PyErg):
         VRPM3Csafe.?tkcmdsetCSAFE_get_serial_num
         :return: serial number of erg [0xFF, 0xFF, 0xFF, 0xFF]
         """
-        data = csafe_dic.cmds['get_serial_num']
-        message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'get_serial_num'
+        data = csafe_dic.cmds[cmd]
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
-        # TODO return format
-        return self.send(message)
+
+        self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
+        resp = self.send(message)
+        if resp:
+            serial = bytes2int(resp[csafe_cmd][2:][::-1])
+            self.raw_logger.debug('Erg {:02X} have {} serial num'.format(destination, serial))
+            return serial
+        else:
+            return []
 
     def set_erg_num(self, serial_num, erg_num):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_erg_num
         :return:
         """
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_erg_num'
 
-        data = csafe_dic.cmds['set_erg_num'][:-1]
-        data.extend(serial_num)
+        data = csafe_dic.cmds[cmd][:-1]
+        data.extend(int2bytes(4, serial_num)[::-1])
         data.append(erg_num)
 
         destination = 0xFD if erg_num is 0x01 else 0xFF
-        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
 
+        self.raw_logger.debug('Erg {:02X} {} {:02X} to erg {}'.format(self._erg_num, cmd, erg_num, serial_num))
         self.send(message)
 
-    def set_erg_num_check(self, destination, serial_num):
+    def get_erg_num_confirm(self, destination, serial_num):
         """
         get_erg_num_confirm
         :param destination:
@@ -72,13 +87,26 @@ class PyErgRace(pyrow.PyErg):
         :return: confirm set erg num
         """
 
-        data = csafe_dic.cmds['get_erg_num_confirm'][:-1]
-        data.extend(serial_num)
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'get_erg_num_confirm'
+        data = csafe_dic.cmds[cmd][:-1]
+        data.extend(int2bytes(4, serial_num)[::-1])
 
-        message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
-
-        self.send(message)
+        self.raw_logger.debug('Erg {:02X} {} from erg {} with address {:02X}'.format(self._erg_num,
+                                                                                     cmd,
+                                                                                     serial_num,
+                                                                                     destination))
+        resp = self.send(message)
+        if resp:
+            if resp[csafe_cmd][1] == destination:
+                self.raw_logger.debug('Erg {} with correct address {:02X}'.format(serial_num, destination))
+            else:
+                self.raw_logger.critical('Erg {:02X} don\'t have correct address {:02X}'.format(destination,
+                                                                                                resp[csafe_cmd][1]))
+        else:
+            self.raw_logger.critical('Erg {:02X} don\'t have resp from erg{}'.format(self._erg_num, destination))
 
     def set_screen_state(self, destination, state):
         """
@@ -86,12 +114,18 @@ class PyErgRace(pyrow.PyErg):
 
         :return:
         """
-        data = csafe_dic.cmds['set_screen_state'][:-1]
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_screen_state'
+
+        data = csafe_dic.cmds[cmd][:-1]
         data.append(state)
 
-        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
-
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X} with state {:02X}'.format(self._erg_num,
+                                                                                     cmd,
+                                                                                     destination,
+                                                                                     state))
         self.send(message)
 
     def close(self):
@@ -275,36 +309,41 @@ class PyErgRace(pyrow.PyErg):
                   source=csafe_command["source"],
                   count_bytes=csafe_command["data_byte_command"])
 
-    def set_race_starting_physical_address(self, destionation=0x01):
+    def set_race_starting_physical_address(self, destination):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_starting_physical_address@@YAFGE@Z
         :return:
         """
-        raw_command = "02 f0 01 00 76 03 2c 01 01 59 f2"
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_race_starting_physical_address'
 
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destionation,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        data = csafe_dic.cmds[cmd]
 
-    def set_race_operation_type(self, destination=0x01, state=0x04):
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def set_race_operation_type(self, destination, state):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_operation_type@@YAFGE@Z
         :return:
         """
-        # raw_command = "02 f0 01 00 76 03 1e 01 04 6e f2"
-        raw_command = "02 f0 01 00 76 03 1e 01 " + str(hex(state)[2:]) + " 6e f2"
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_race_operation_type'
 
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        data = csafe_dic.cmds[cmd][:-1]
+        data.append(state)
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X} with state {:02X}'.format(self._erg_num,
+                                                                                     cmd,
+                                                                                     destination,
+                                                                                     state))
+        self.send(message)
 
     def get_race_lane_request(self):
         """
