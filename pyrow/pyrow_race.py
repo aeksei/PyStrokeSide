@@ -165,12 +165,37 @@ class PyErgRace(pyrow.PyErg):
                   source=csafe_command["source"],
                   count_bytes=csafe_command["data_byte_command"])
 
-    def VRPM3Race_100012D0(self, destination=0x01):
+    def VRPM3Race_100012D0(self, destination):
         """
         VRPM3Race.100012D0(guessed Arg1,Arg2)
         :return:
         """
-        raw_command = "02 f0 01 00 7e 01 80 ff f2"
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'VRPM3Race.100012D0'
+
+        data = csafe_dic.cmds[cmd]
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def call_10001210(self, destination):
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'call_10001210'
+
+        data = csafe_dic.cmds[cmd]
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def call_10001400(self, destination, serial_num):
+        # for PM3 command
+        raw_command = "02 f0 01 00 76 0e 1a 0c 19 a6 84 88 67 6f 21 cc 19 8c 48 e6 03 f2"  # serial num
         csafe_command = to_hex.prerare_raw_command(raw_command)
         message = [csafe_command["id"]]
         message.extend(csafe_command["data"])
@@ -179,41 +204,7 @@ class PyErgRace(pyrow.PyErg):
                   source=csafe_command["source"],
                   count_bytes=csafe_command["data_byte_command"])
 
-    def call_10001210(self, destination=0x01):
-        raw_command = "02 f0 01 00 7e 01 9a e5 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
-
-    def VRPM3Race_10001380(self, destination=0x01):  # get serial num
-        """
-        VRPM3Race.10001380(guessed Arg1,Arg2)
-        :return:
-        """
-        raw_command = "02 f0 01 00 7e 01 82 fd f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
-
-    def call_10001400(self, destination=0x01):
-        raw_command = "02 f0 01 00 76 0e 1a 0c 19 a6 84 88 67 6f 21 cc 19 8c 48 e6 03 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
-
-    def VRPM3Race_10001000(self, destination=0x01):
+    def VRPM3Race_10001000(self, destination):
         """
         setting erg
         :return:
@@ -221,50 +212,59 @@ class PyErgRace(pyrow.PyErg):
 
         self.VRPM3Race_100012D0(destination=destination)
         self.call_10001210(destination=destination)
-        self.VRPM3Race_10001380(destination=destination)  # get serial num
-        self.call_10001400(destination=destination)
+        # self.get_serial_num(destination=destination)  # get serial num
+        # self.call_10001400(destination=destination)
 
-    def set_race_idle_params(self, destination=0x01):
+    def set_race_idle_params(self, destination):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_idle_params@@YAFGGGGG@Z
+        02 f0 01 00 76 0a 21 08 ff ff 38 40 00 05 00 01 29 f2
         :return:
         """
-        raw_command = "02 f0 01 00 76 0a 21 08 ff ff 38 40 00 05 00 01 29 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_race_idle_params'
 
-    def set_datetime(self, destination=0x01):
+        data = csafe_dic.cmds[cmd]
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def set_datetime(self, destination):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_datetime@@YAFGEEEEEG@Z>]
+        02 f0 01 00 76 09 22 07 0a 0e 01 0c 01 07 e2 b7 f2
         :return:
         """
-        raw_command = "02 f0 01 00 76 09 22 07 0a 0e 01 0c 01 07 e2 b7 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_datetime'
+        # TODO datetime
+        data = csafe_dic.cmds[cmd]
 
-    def set_screen_error_mode(self):
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def set_screen_error_mode(self, destination):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_screen_error_mode@@YAFGE@Z>]
+        02 F0 01 00 76 03 27 01 00 53 F2
         :return:
         """
-        raw_command = "02 F0 01 00 76 03 27 01 00 53 F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=csafe_command["destination"],
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        csafe_cmd = 'CSAFE_SETPMCFG_CMD'
+        cmd = 'set_datetime'
+
+        data = csafe_dic.cmds[cmd]
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
 
     def set_cpu_tick_rate(self, destination=0x01, bar=0x01):
         """
