@@ -26,6 +26,9 @@ class PyErgRace(pyrow.PyErg):
             console.setLevel(logging.DEBUG)
             self.raw_logger.addHandler(console)
 
+    def get_erg_num(self):
+        return self._erg_num
+
     def reset_erg_num(self):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_reset_erg_num

@@ -17,7 +17,6 @@ class MasterSlavePyStrokeSide:
         pySS.master_erg.set_screen_error_mode(destination)
         pySS.master_erg.set_cpu_tick_rate(destination, bar=0x01)
         pySS.master_erg.get_cpu_tick_rate(destination)
-        pySS.master_erg.get_erg_info(destination)
 
     def init_master_erg(self):
         self.master_erg.reset_erg_num()
@@ -37,6 +36,7 @@ if __name__ == "__main__":
 
     # Number ALL ergs
     pySS.master_erg.reset_erg_num()
+    pySS.erg_num = {}
     pySS.init_master_erg()
 
     pySS.master_erg.set_race_starting_physical_address(destination=0x01)
