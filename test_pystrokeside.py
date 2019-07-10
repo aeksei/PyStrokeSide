@@ -20,13 +20,14 @@ class MasterSlavePyStrokeSide:
 
     def init_master_erg(self):
         self.master_erg.reset_erg_num()
-        while True:
-            serial = self.master_erg.get_serial_num(destination=0xFD)
-            if serial:
-                self.master_erg.set_erg_num(serial, 0x01)
-                self.erg_num[serial] = 0x01
-                self.master_erg.get_erg_num_confirm(0x01, serial)
-                break
+
+        serial = self.master_erg.get_serial_num(destination=0xFD)
+
+        self.master_erg.set_erg_num(serial, 0x01)
+        self.erg_num[serial] = 0x01
+
+        serial = self.master_erg.get_serial_num(destination=0x01)
+        self.master_erg.get_erg_num_confirm(0x01, serial)
         self.setting_erg(destination=0x01)
 
 

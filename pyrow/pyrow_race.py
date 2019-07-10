@@ -56,13 +56,13 @@ class PyErgRace(pyrow.PyErg):
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
-        resp = self.send(message)
-        if resp:
-            serial = bytes2int(resp[csafe_cmd][2:][::-1])
-            self.raw_logger.debug('Erg {:02X} have {} serial num'.format(destination, serial))
-            return serial
-        else:
-            return []
+        resp = []
+        while not resp:
+            resp = self.send(message)
+            if resp:
+                serial = bytes2int(resp[csafe_cmd][2:][::-1])
+                self.raw_logger.debug('Erg {:02X} have {} serial num'.format(destination, serial))
+                return serial
 
     def set_erg_num(self, serial_num, erg_num):
         """
