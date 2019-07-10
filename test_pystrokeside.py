@@ -1,51 +1,55 @@
 from pyrow import pyrow
 from pyrow.pyrow_race import PyErgRace
 
-if __name__ == "__main__":
+
+class MasterSlavePyStrokeSide:
     erg_num = {}
 
-    ergs = list(pyrow.find())
+    def __init__(self):
+        self.master_erg = PyErgRace(list(pyrow.find())[0])
 
-    erg = ergs[0]
-    master_erg = PyErgRace(erg)
+    def setting_erg(self, destination):
+        pySS.master_erg.VRPM3Race_100012D0(destination)
+        pySS.master_erg.call_10001210(destination)
+        pySS.master_erg.set_race_idle_params(destination)
+        pySS.master_erg.set_datetime(destination)
+
+        pySS.master_erg.set_screen_error_mode(destination)
+        pySS.master_erg.set_cpu_tick_rate(destination, bar=0x01)
+        pySS.master_erg.get_cpu_tick_rate(destination)
+        pySS.master_erg.get_erg_info(destination)
+
+    def init_master_erg(self):
+        self.master_erg.reset_erg_num()
+        while True:
+            serial = self.master_erg.get_serial_num(destination=0xFD)
+            if serial:
+                self.master_erg.set_erg_num(serial, 0x01)
+                self.erg_num[serial] = 0x01
+                self.master_erg.get_erg_num_confirm(0x01, serial)
+                break
+        self.setting_erg(destination=0x01)
+
+
+if __name__ == "__main__":
+
+    pySS = MasterSlavePyStrokeSide()
 
     # Number ALL ergs
-    master_erg.reset_erg_num()
+    pySS.master_erg.reset_erg_num()
+    pySS.init_master_erg()
 
-    while True:
-        serial = master_erg.get_serial_num(destination=0xFD)
-        if serial:
-            erg_num[serial] = 0x01
-            master_erg.set_erg_num(serial, erg_num[serial])
-            master_erg.get_erg_num_confirm(erg_num[serial], serial)
-            break
+    pySS.master_erg.set_race_starting_physical_address(destination=0x01)
+    pySS.master_erg.set_race_operation_type(destination=0x01, state=0x04)
 
-    master_erg.set_race_starting_physical_address(destination=0x01)
-    master_erg.set_race_operation_type(destination=0x01, state=0x04)
+    pySS.master_erg.set_race_starting_physical_address(destination=0xFF)
+    pySS.master_erg.set_race_operation_type(destination=0xFF, state=0x04)
 
-    master_erg.set_race_starting_physical_address(destination=0xFF)
-    master_erg.set_race_operation_type(destination=0xFF, state=0x04)
+    pySS.master_erg.set_screen_state(destination=0xFF, state=0x01)
 
-    master_erg.set_screen_state(destination=0xFF, state=0x01)
 
-    master_erg.reset_erg_num()
-    while True:
-        serial = master_erg.get_serial_num(destination=0xFD)
-        if serial:
-            erg_num[serial] = 0x01
-            master_erg.set_erg_num(serial, erg_num[serial])
-            master_erg.erg_num = 0x01
-            master_erg.get_erg_num_confirm(erg_num[serial], serial)
-            break
 
-    master_erg.VRPM3Race_10001000(destination=0x01)
-    master_erg.set_race_idle_params(destination=0x01)
-    master_erg.set_datetime(destination=0x01)
 
-    master_erg.set_screen_error_mode(destination=0x01)
-    master_erg.set_cpu_tick_rate(destination=0x01, bar=0x01)
-    master_erg.get_cpu_tick_rate(destination=0x01)
-    master_erg.get_erg_info(destination=0x01)
     # END Discovering Ergs
 
 
