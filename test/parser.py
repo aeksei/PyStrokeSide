@@ -27,7 +27,7 @@ def parse_set_race_lane_setup(file):
 
 def get_raw_data(file, start="1900-01-01 00:00:00,000", finish="2100-01-01 00:00:00,000"):
     """
-    Example: pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.txt', header=False, index=False)
+    Example: pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.racerace', header=False, index=False)
     :param file:
     :param start:
     :param finish:
@@ -101,8 +101,8 @@ def raw_cmd_to_csv(file, save_file=False):
 if __name__ == "__main__":
     path = "LogData\\RawCommands\\"
     LOG_FILE = path + "RawCommands.log"
-    #pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.txt', header=False, index=False)
-    raw_cmd_to_csv('set_up_ergs.txt', save_file=True)
+    #pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.race', header=False, index=False)
+    raw_cmd_to_csv('set_up_ergs.race', save_file=True)
 
 
 

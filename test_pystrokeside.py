@@ -1,8 +1,6 @@
 from pyrow import pyrow
 from pyrow.pyrow_race import PyErgRace
 
-import time
-
 
 class MasterSlavePyStrokeSide:
     erg_num = {}
@@ -46,10 +44,30 @@ if __name__ == "__main__":
     pySS.master_erg.set_race_starting_physical_address(destination=0xFF)
     pySS.master_erg.set_race_operation_type(destination=0xFF, state=0x04)
 
-    pySS.master_erg.set_screen_state(destination=0xFF, state=0x01)
+    pySS.master_erg.set_screen_state(destination=0xFF, state=0x01)  # on PM5 state screen "request next Erg #"
 
     while True:
         resp = pySS.master_erg.get_race_lane_request()
-        time.sleep(1)
+        if 'CSAFE_GETPMCFG_CMD' in resp:
+            serial_num = to_hex.list_to_hex_str(resp['CSAFE_GETPMCFG_CMD'][3:-1])
+            if serial_num not in race_line:
+                race_line[serial_num] = len(race_line) + 1
+            if resp['CSAFE_GETPMCFG_CMD'][2] != 0xFD:
+                erg_race.set_race_lane_setup(destination=erg_race.id_erg[serial_num], race_line=race_line[serial_num])
+                erg_race.set_screen_state(destination=erg_race.id_erg[serial_num], state=0x02)
+            else:
+                erg_race.set_erg_num(serial_num=serial_num)
+                erg_race.VRPM3Race_10001000(destination=erg_race.id_erg[serial_num])  # may be need resp
+                erg_race.set_race_idle_params(destination=erg_race.id_erg[serial_num])
+                erg_race.set_datetime(destination=erg_race.id_erg[serial_num])
 
+                erg_race.set_race_operation_type(destination=erg_race.id_erg[serial_num])
+                erg_race.set_race_lane_setup(destination=erg_race.id_erg[serial_num], race_line=race_line[serial_num])
+                erg_race.set_screen_state(destination=erg_race.id_erg[serial_num], state=0x02)
+        print(resp)
+        print(race_line)
+        # make stop search
+        if len(race_line) == 2:
+            break
+    # press "Done numbering"
 
