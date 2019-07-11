@@ -1,6 +1,8 @@
 from pyrow import pyrow
 from pyrow.pyrow_race import PyErgRace
 
+import time
+
 
 class MasterSlavePyStrokeSide:
     erg_num = {}
@@ -22,7 +24,6 @@ class MasterSlavePyStrokeSide:
         self.master_erg.reset_erg_num()
 
         serial = self.master_erg.get_serial_num(destination=0xFD)
-
         self.master_erg.set_erg_num(serial, 0x01)
         self.erg_num[serial] = 0x01
 
@@ -32,7 +33,6 @@ class MasterSlavePyStrokeSide:
 
 
 if __name__ == "__main__":
-
     pySS = MasterSlavePyStrokeSide()
 
     # Number ALL ergs
@@ -48,9 +48,8 @@ if __name__ == "__main__":
 
     pySS.master_erg.set_screen_state(destination=0xFF, state=0x01)
 
-
-
-
-    # END Discovering Ergs
+    while True:
+        resp = pySS.master_erg.get_race_lane_request()
+        time.sleep(1)
 
 

@@ -29,7 +29,7 @@ class PyErgRace(pyrow.PyErg):
     def get_erg_num(self):
         return self._erg_num
 
-    def reset_erg_num(self):
+    def reset_erg_num(self, destination=0xFF):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_reset_erg_num
         :return:
@@ -37,7 +37,7 @@ class PyErgRace(pyrow.PyErg):
         csafe_cmd = 'CSAFE_GETPMCFG_CMD'
         cmd = 'reset_erg_num'
         data = csafe_dic.cmds[cmd]
-        message = [[0xFF, 0x00, csafe_cmd, len(data)]]
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
@@ -363,20 +363,26 @@ class PyErgRace(pyrow.PyErg):
                                                                                      state))
         self.send(message)
 
-    def get_race_lane_request(self):
+    def get_race_lane_request(self, destination=0xFF):
         """
         1000A2B7
         VRPM3Csafe.?tkcmdsetCSAFE_get_race_lane_request@@YAFGPAE@Z
+
+        02 f0 ff 00 7e 04 51 02 00 ff d6 f2
         :return:
         """
-        raw_command = "02 f0 ff 00 7e 04 51 02 00 ff d6 f2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        return self.send(message=message,
-                         destination=csafe_command["destination"],
-                         source=csafe_command["source"],
-                         count_bytes=csafe_command["data_byte_command"])
+        csafe_cmd = 'CSAFE_GETPMCFG_CMD'
+        cmd = 'get_race_lane_request'
+
+        data = csafe_dic.cmds[cmd]
+
+        message = [[destination, 0x00, csafe_cmd, len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num,
+                                                                   cmd,
+                                                                   destination))
+        return self.send(message)
 
     def set_race_lane_setup(self, destination=0x01, race_line=0x01):
         """

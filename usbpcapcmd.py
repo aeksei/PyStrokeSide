@@ -19,7 +19,7 @@ class USBPcapCMD:
         self.usb_interface = None
         self.capture_process = None
 
-        self.find_erg()
+        #self.find_erg()
 
     def find_erg(self):
         process = Popen('listdevs.exe', stdout=PIPE, shell=True)
@@ -35,10 +35,12 @@ class USBPcapCMD:
 
     def capture(self):
         command = ' '.join([_PATH_USBPCAP.replace(':\\', ':\\"')+'"',
-                            '-d', self.usb_interface[0],
+                            '-d', r"\\.\USBPcap1",
                             '-o', '-',
                             # '--devices', self.usb_interface[1]])
                             '-A'])
+        os.chdir('C:\\Program Files\\USBPcap')
+        command = r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
         self.logger.debug(command)
         self.capture_process = Popen(command, stdout=PIPE, shell=True)
         self.logger.info('Start capture traffic')
