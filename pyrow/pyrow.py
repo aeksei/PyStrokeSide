@@ -438,7 +438,6 @@ class PyErg(object):
         #sends message to erg and records length of message
         try:
             length = self.erg.write(self.outEndpoint, csafe, timeout=100)
-            time.sleep(1)
         # Checks for USBError 16: Resource busy
         except USBError as e:
             if e.errno != 19:

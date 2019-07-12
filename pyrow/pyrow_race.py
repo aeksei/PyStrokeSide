@@ -29,6 +29,9 @@ class PyErgRace(pyrow.PyErg):
     def get_erg_num(self):
         return self._erg_num
 
+    def set_erg_num(self, erg_num):
+        self._erg_num = erg_num
+
     def reset_erg_num(self, destination=0xFF):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_reset_erg_num
@@ -64,7 +67,7 @@ class PyErgRace(pyrow.PyErg):
                                                                                   serial))
                 return serial
 
-    def set_erg_num(self, serial_num, erg_num):
+    def set_erg_num(self, erg_num, serial_num):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_erg_num
         :return:
@@ -163,15 +166,21 @@ class PyErgRace(pyrow.PyErg):
         self.send(message)
 
     def call_10001400(self, destination, serial_num):
-        # for PM3 command
-        raw_command = "02 f0 01 00 76 0e 1a 0c 19 a6 84 88 67 6f 21 cc 19 8c 48 e6 03 f2"  # serial num
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        """
+        02 f0 01 00 76 0e 1a 0c serial 67 6f 21 cc 19 8c 48 e6 03 f2
+        :param destination:
+        :param serial_num:
+        :return:
+        """
+        cmd = 'call_10001400'
+        data = csafe_dic.cmds[cmd]
+        data = data[:2] + serial_num + data[3:]
+
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
 
     def VRPM3Race_10001000(self, destination):
         """
@@ -323,6 +332,7 @@ class PyErgRace(pyrow.PyErg):
         self.send(message)
 
     def get_race_lane_request(self, destination=0xFF, race_line=0x00):
+        # TODO with serial num
         """
         1000A2B7
         VRPM3Csafe.?tkcmdsetCSAFE_get_race_lane_request@@YAFGPAE@Z
