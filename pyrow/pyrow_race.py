@@ -113,7 +113,9 @@ class PyErgRace(pyrow.PyErg):
                                                                                      cmd,
                                                                                      bytes2int(serial_num[::-1]),
                                                                                      destination))
-        resp = self.send(message)
+        self.send(message)
+        """
+        handling incorrect when press 'request next Erg' on PM5 
         if resp:
             if resp['CSAFE_GETPMCFG_CMD'][1] == destination:
                 self.raw_logger.debug('Erg {} with correct address {:02X}'.format(serial_num, destination))
@@ -122,6 +124,7 @@ class PyErgRace(pyrow.PyErg):
                                                                                          resp['CSAFE_GETPMCFG_CMD'][1]))
         else:
             self.raw_logger.critical('Erg {:02X} don\'t have resp from erg{}'.format(self._erg_num, destination))
+        """
 
     def set_screen_state(self, destination, state):
         """

@@ -83,14 +83,15 @@ class MasterSlavePyStrokeSide:
                 serial = resp['CSAFE_GETPMCFG_CMD'][3:-1]
 
                 if erg_num == 0xFD:
-                    erg_num = len(self.serial_num)
+                    erg_num = len(self.serial_num) + 1
                     self.serial_num[erg_num] = serial  # new erg num for erg lane request
                     self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
 
                     self.master_erg.get_erg_num_confirm(erg_num, serial)
-                    self.setting_erg(erg_num)
+                    self.setting_erg(erg_num, serial)
                     self.master_erg.set_race_operation_type(erg_num, 0x04)
 
+                self.race_line[erg_num] = len(self.race_line) + 1
                 self.master_erg.set_race_lane_setup(erg_num, self.race_line[erg_num])
                 self.master_erg.set_screen_state(erg_num, 0x02)
                 self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
@@ -116,6 +117,10 @@ class MasterSlavePyStrokeSide:
 if __name__ == "__main__":
     pySS = MasterSlavePyStrokeSide()
     pySS.restore_erg()
+
+    sleep(3)
+
+    pySS.number_all_erg()
 
     pySS.close()
 
