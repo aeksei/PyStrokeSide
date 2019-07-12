@@ -56,8 +56,9 @@ cmds['CSAFE_GETCAPS_CMD'] = [0x70, [1, ]]  # Capability Code
 
 # Extended Long command
 cmds['CSAFE_SETPMCFG_CMD'] = [0x76, []]
+cmds['CSAFE_SETPMDATA_CMD'] = [0x77, []]
 cmds['CSAFE_GETPMCFG_CMD'] = [0x7e, []]
-cmds['CSAFE_SETPMTIME_CMD'] = [0x77, []]
+cmds['CSAFE_GETPMDATA_CMD'] = [0x7F, []]
 
 cmds['reset_erg_num'] = [0xe1, 0x0b, 0x02, 0x00, 0x00]
 cmds['get_serial_num'] = [0x82]
@@ -159,8 +160,9 @@ resp[0x70] = ['CSAFE_GETCAPS_CMD', [11, ]]  # Depended on Capability Code (varia
 
 # Response Data to Extended Long Commands
 resp[0x76] = ['CSAFE_SETPMCFG_CMD', [0, ]]
-resp[0x77] = ['CSAFE_GETPMCFG_CMD', [1, ]]
+resp[0x77] = ['CSAFE_SETPMDATA_CMD', [1, ]]
 resp[0x7e] = ['CSAFE_GETPMCFG_CMD', [0, ]]
+resp[0x7F] = ['CSAFE_GETPMDATA_CMD', [0, ]]
 
 # Response Data to PM3 Specific Short Commands
 resp[0x1A89] = ['CSAFE_PM_GET_WORKOUTTYPE', [1, ]]  # Workout Type
