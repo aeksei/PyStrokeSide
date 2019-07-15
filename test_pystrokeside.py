@@ -12,6 +12,10 @@ class MasterSlavePyStrokeSide:
         self.race_line = {0x01: 0x01,
                           0x02: 0x02}
 
+        self.race_name = "test_race"
+        self.race_participant = {0x01: "Lane_1",
+                                 0x02: "Lane_2"}
+
     def reset_all_erg(self):  # reset all
         self.master_erg.reset_erg_num()
 
@@ -45,7 +49,7 @@ class MasterSlavePyStrokeSide:
         for erg_num, serial in self.serial_num.items():
             self.master_erg.get_race_lane_check(erg_num)
             self.master_erg.set_race_lane_setup(erg_num, self.race_line[erg_num])
-            sleep(0.25)  # need for correct race_lane setup
+            #sleep(0.25)  # need for correct race_lane setup
             self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
 
         self.master_erg.set_screen_state(0xFF, 0x0e)
@@ -98,8 +102,48 @@ class MasterSlavePyStrokeSide:
 
             # make stop search
             if len(self.race_line) == 2:
+                print(self.race_line)
                 break
         # press "Done numbering"
+
+    def set_race_name(self):
+        for erg_num in self.race_line:
+            self.master_erg.set_race_participant(erg_num, 0x00, self.race_name)
+
+    def set_participant_name(self):
+        for erg_num, erg_line in self.race_line.items():
+            self.master_erg.set_race_participant(0xFF, erg_line, self.race_participant[erg_num])
+
+        for check_erg_num in self.race_line:
+            count_participant = self.master_erg.get_race_participant_count(check_erg_num)
+            if count_participant != len(self.race_participant):
+                for erg_num, erg_line in self.race_line.items():
+                    self.master_erg.set_race_participant(check_erg_num, erg_line, self.race_participant[erg_num])
+
+    def set_race(self):
+        for erg_num in self.race_line:
+            self.master_erg.set_screen_state(erg_num, 0x08)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, 0x06)
+
+        self.set_race_name()
+        self.set_participant_name()
+
+        for erg_num in self.race_line:
+            self.master_erg.set_screen_state(erg_num, 0x27)
+
+        # TODO CSAFE_SETCALORIES_CMD
+
+        for erg_num in self.race_line:
+            self.master_erg.set_screen_state(erg_num, 0x1f)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_workout_type(erg_num, 0x00)
+            self.master_erg.set_screen_state(erg_num, 0x03)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, 0x0C)
 
     def close(self):
         self.master_erg.set_race_operation_type(0x01, 0x06)
@@ -117,11 +161,13 @@ class MasterSlavePyStrokeSide:
 if __name__ == "__main__":
     pySS = MasterSlavePyStrokeSide()
     pySS.restore_erg()
-
     sleep(3)
 
     pySS.number_all_erg()
+    sleep(5)
+
+    pySS.set_race()
+    sleep(5)
 
     pySS.close()
 
-    # Number ALL ergs

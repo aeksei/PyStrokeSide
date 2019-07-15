@@ -39,11 +39,13 @@ class USBPcapCMD:
                             '-o', '-',
                             # '--devices', self.usb_interface[1]])
                             '-A'])
+        path = os.getcwd()
         os.chdir('C:\\Program Files\\USBPcap')
         command = r"USBPcapCMD.exe -d \\.\USBPcap1 -o - -A"
         self.logger.debug(command)
         self.capture_process = Popen(command, stdout=PIPE, shell=True)
         self.logger.info('Start capture traffic')
+        os.chdir(path)
 
     def recv(self, buf=LEN_BUF):
         return self.capture_process.stdout.read(buf)

@@ -335,7 +335,7 @@ class PyErgRace(pyrow.PyErg):
         self.send(message)
 
     def get_race_lane_request(self, destination=0xFF, race_line=0x00):
-        # TODO with serial num
+        # TODO check serial num
         """
         1000A2B7
         VRPM3Csafe.?tkcmdsetCSAFE_get_race_lane_request@@YAFGPAE@Z
@@ -376,92 +376,80 @@ class PyErgRace(pyrow.PyErg):
                                                                                          race_line))
         self.send(message)
 
-    def foo(self, destination=0x01):
-        raw_command = "02 F0 01 00 7E 01 87 F8 F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
-
-    def erg_enumeration_check(self, destination=0x01):
+    def foo(self, destination):
         """
-        10015127
-        VRPM3Race.erg_enumeration_check
+        02 f0 ff 00 76 07 1b 04 00 00 00 01 d7 b8 f2
 
+        :param destination:
         :return:
         """
-        raw_command = "02 F0 01 00 7E 01 87 F8 F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        cmd = 'foo'
+        data = csafe_dic.cmds[cmd]
 
-        self.get_serial_num(destination=destination)
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
 
-    def set_workout_type(self, destination=0x01):
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def set_workout_type(self, destination, state):
         """
         00BBC668
         VRPM3Csafe.?tkcmdsetCSAFE_set_workout_type@@YAFGE@Z
+        02 F0 01 00 76 03 01 01 state 74 F2
 
         :return:
         """
-        raw_command = "02 F0 01 00 76 03 01 01 01 74 F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        cmd = 'set_workout_type'
+        data = csafe_dic.cmds[cmd]
+        data[-1] = state
 
-    def set_race_participant(self, name, lane=0x00, destination=0xFF):
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def set_race_participant(self, destination, lane, name):
         """
         00BBB81F
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_participant@@YAFGGPAD@Z
-
+        02 F0 FF 00 76 09 32 07 02 4C 61 6E 65 32 00 5C F2"  # Lane2 4C 61 6E 65 32
         :return:
         """
-        # raw_command = "02 F0 FF 00 76 09 32 07 02 4C 61 6E 65 32 00 5C F2"  # Lane2 4C 61 6E 65 32
-        message = [hex(ord(c))[2:] for c in name]
-        message.append(hex(0)[2:])
-        message.insert(0, hex(lane)[2:])  # add number lane
-        message.insert(0, hex(len(message))[2:])  # add length sub message
-        message.insert(0, hex(50)[2:])  # add id command
-        message.insert(0, hex(len(message))[2:])  # add length message
-        # message = [50, len(name) + 2, lane] + name + [0]  # 32 0A 00 + name + 00
+        cmd = 'set_race_participant'
+        data = csafe_dic.cmds[cmd][:-1]
+        hex_name = [ord(c) for c in name]
+        hex_name.append(0x00)
+        hex_name.insert(0, lane)
+        hex_name.insert(0, len(hex_name))
+        data.extend(hex_name)
 
-        raw_command = "02 F0 FF 00 76 " + " ".join(message) + " 5C F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
-        self.send(message=message,
-                  destination=destination,
-                  source=csafe_command["source"],
-                  count_bytes=csafe_command["data_byte_command"])
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
 
     def get_race_participant_count(self, destination=0x01):
         """
         00BBBD0F
         VRPM3Csafe.?tkcmdsetCSAFE_get_race_participant_count@@YAFGPAE@Z
 
+        02 F0 02 00 7E 01 96 E9 F2
         :return:
         """
-        raw_command = "02 F0 02 00 7E 01 96 E9 F2"
-        csafe_command = to_hex.prerare_raw_command(raw_command)
-        message = [csafe_command["id"]]
-        message.extend(csafe_command["data"])
+        cmd = 'get_race_participant_count'
+        data = csafe_dic.cmds[cmd]
 
-        resp = self.send(message=message,
-                         destination=destination,
-                         source=csafe_command["source"],
-                         count_bytes=csafe_command["data_byte_command"])
-        return resp
+        message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
+        message.extend(data)
+
+        self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        resp = self.send(message)
+        count = resp['CSAFE_GETPMCFG_CMD'][2]
+        self.raw_logger.debug('Erg {:02X} have {} setting participant'.format(destination, count))
+        return count
 
     def get_tick_timebase(self, destination=0x01):
         """

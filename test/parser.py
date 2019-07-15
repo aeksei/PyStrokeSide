@@ -101,8 +101,8 @@ def raw_cmd_to_csv(file, save_file=False):
 if __name__ == "__main__":
     path = "LogData\\RawCommands\\"
     LOG_FILE = path + "RawCommands.log"
-    #pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('set_up_ergs.race', header=False, index=False)
-    raw_cmd_to_csv('set_up_ergs.race', save_file=True)
+    pd.DataFrame(get_raw_data(LOG_FILE)).to_csv('all.race', header=False, index=False)
+    raw_cmd_to_csv('all.race', save_file=True)
 
 
 
