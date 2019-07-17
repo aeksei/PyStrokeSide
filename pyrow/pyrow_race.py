@@ -1,6 +1,7 @@
 from pyrow import pyrow
 from pyrow.csafe import csafe_dic
 from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
+from pyrow.csafe.csafe_cmd import  gen_auth_code
 
 is_debug = True
 
@@ -177,24 +178,14 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'call_10001400'
         data = csafe_dic.cmds[cmd]
-        data = data[:2] + serial_num + data[3:]
+        data = data[-1]
+        data.extend(gen_auth_code(serial_num))
 
         message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
-
-    def VRPM3Race_10001000(self, destination):
-        """
-        setting erg
-        :return:
-        """
-
-        self.VRPM3Race_100012D0(destination=destination)
-        self.call_10001210(destination=destination)
-        # self.get_serial_num(destination=destination)  # get serial num
-        # self.call_10001400(destination=destination)
 
     def set_race_idle_params(self, destination):
         """

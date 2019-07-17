@@ -7,9 +7,29 @@
 
 from warnings import warn
 from pyrow.csafe import csafe_dic
+import numpy as np
+
 
 def cmd2hex(list_int):
     return ' '.join(['{:02X}'.format(i) for i in list_int])
+
+
+def gen_auth_code(serial):
+    v8 = np.uint32(serial)
+    v6 = np.uint32(serial)
+    v5 = np.uint32(0)
+    a3 = [np.uint32(0x01071984),
+          np.uint32(0x12221959),
+          np.uint32(0x12301958),
+          np.uint32(0x03191960)]
+
+    for i in range(32):
+        v8 = np.uint32(v8 + a3[v5 & 3] + (v5 ^ v6) + ((v6 >> 5) ^ np.uint32(16 * v6)))
+        v5 = np.uint32(v5 - 1640531527)
+        v6 = np.uint32(v6 + a3[(v5 >> 11) & 3] + (v5 ^ v8) + ((v8 >> 5) ^ np.uint32(16 * v8)))
+
+    return __int2bytes(4, serial) + __int2bytes(4, v8) + __int2bytes(4, v6)
+
 
 def __int2bytes(numbytes, integer):
     if not 0 <= integer <= 2 ** (8 * numbytes):
@@ -22,6 +42,7 @@ def __int2bytes(numbytes, integer):
 
     return byte
 
+
 def __bytes2int(raw_bytes):
     num_bytes = len(raw_bytes)
     integer = 0
@@ -30,6 +51,7 @@ def __bytes2int(raw_bytes):
         integer = (raw_bytes[k] << (8 * k)) | integer
 
     return integer
+
 
 def __bytes2ascii(raw_bytes):
     word = ""
