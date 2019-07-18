@@ -144,6 +144,53 @@ class MasterSlavePyStrokeSide:
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x0C)
 
+    def prepare_to_race(self):
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, [0x06, 0x9d, 0x83])
+
+        for erg_num in self.race_line:
+            self.master_erg.set_cpu_tick_rate(erg_num, [0x02, 0x9d, 0x83])
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, 0x07)
+
+        self.master_erg.foo(0xff)
+
+        for erg_num in self.race_line:
+            self.master_erg.get_latched_tick_time(erg_num)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, 0x06)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_all_race_params(erg_num, 2000)
+            self.master_erg.configure_workout(erg_num)
+            self.master_erg.set_screen_state(erg_num, 0x04)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_operation_type(erg_num, 0x08)
+
+    def start_race(self):
+        self.master_erg.latch_tick_time(0x01)
+
+        for erg_num in self.race_line:
+            self.master_erg.get_erg_info(erg_num)
+
+        for erg_num in self.race_line:
+            self.master_erg.set_race_start_params(erg_num)
+            self.master_erg.set_race_operation_type(erg_num, 0x09)
+
+        # may be 3 times
+        for i in range(3):
+            for erg_num in self.race_line:
+                self.master_erg.get_erg_info(erg_num)
+
+        while True:
+            for erg_num in self.race_line:
+                self.master_erg.update_race_data(erg_num)
+
+
+
     def close(self):
         self.master_erg.set_race_operation_type(0x01, 0x06)
         self.master_erg.set_screen_state(0xFF, 0x06)
@@ -167,6 +214,8 @@ if __name__ == "__main__":
 
     pySS.set_race()
     sleep(5)
+
+
 
     pySS.close()
 
