@@ -1,7 +1,7 @@
 from pyrow import pyrow
 from pyrow.csafe import csafe_dic
 from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
-from pyrow.csafe.csafe_cmd import  gen_auth_code
+from pyrow.csafe.csafe_cmd import gen_auth_code
 
 is_debug = True
 
@@ -43,7 +43,7 @@ class PyErgRace(pyrow.PyErg):
         message = [[destination, 0x00, 'CSAFE_GETPMCFG_CMD', len(data)]]
         message.extend(data)
 
-        self.raw_logger.debug('Erg {:02X} {}'.format(self._erg_num, cmd))
+        self.raw_logger.debug('Erg {:02X} {} for {:02X} erg'.format(self._erg_num, cmd, destination))
         self.send(message)
         self._erg_num = 0xFD
 
@@ -64,7 +64,7 @@ class PyErgRace(pyrow.PyErg):
             if resp:
                 serial = resp['CSAFE_GETPMCFG_CMD'][2:]
                 self.raw_logger.debug('Erg {:02X} have {} serial num ({})'.format(destination,
-                                                                                  bytes2int(serial[::-1]),
+                                                                                  bytes2int(serial),
                                                                                   serial))
                 return serial
 
@@ -178,7 +178,7 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'call_10001400'
         data = csafe_dic.cmds[cmd]
-        data = data[-1]
+        data = data[:-1]
         data.extend(gen_auth_code(serial_num))
 
         message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
@@ -416,7 +416,7 @@ class PyErgRace(pyrow.PyErg):
         hex_name.insert(0, len(hex_name))
         data.extend(hex_name)
 
-        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
+        message = [[destination, 0x00, 'CSAFE_SETPMDATA_CMD', len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))

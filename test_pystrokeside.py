@@ -102,7 +102,6 @@ class MasterSlavePyStrokeSide:
 
             # make stop search
             if len(self.race_line) == 2:
-                print(self.race_line)
                 break
         # press "Done numbering"
 
