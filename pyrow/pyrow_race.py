@@ -233,7 +233,7 @@ class PyErgRace(pyrow.PyErg):
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
 
-    def set_cpu_tick_rate(self, destination, bar):
+    def set_cpu_tick_rate(self, destination, state):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_cpu_tick_rate@@YAFGE@Z
         02 f0 01 00 76 03 25 01 "bar" 50 f2
@@ -241,8 +241,12 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'set_cpu_tick_rate'
         data = csafe_dic.cmds[cmd][:-1]
-        data.append(bar)
-
+        # TODO fix this
+        if isinstance(state, list):
+            data.extend(state)
+            state = state[0]
+        else:
+            data.append(state)
         message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
 
@@ -299,7 +303,12 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'set_race_operation_type'
         data = csafe_dic.cmds[cmd][:-1]
-        data.append(state)
+        # TODO fix this
+        if isinstance(state, list):
+            data.extend(state)
+            state = state[0]
+        else:
+            data.append(state)
 
         message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
@@ -512,7 +521,6 @@ class PyErgRace(pyrow.PyErg):
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
 
-
     def set_all_race_params(self, destination, distance):
         """
         1000C8B1
@@ -525,15 +533,14 @@ class PyErgRace(pyrow.PyErg):
 
         cmd = 'set_all_race_params'
         data = csafe_dic.cmds[cmd]
-        distance = int2bytes(2, distance)[::-1]
-        data = data[:-12] + distance + data[-10:]
+        distance = int2bytes(4, distance)[::-1]
+        data = data[:-11] + distance + data[-10:]
 
         message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
-
 
     def configure_workout(self, destination):
         """

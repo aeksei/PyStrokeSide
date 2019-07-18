@@ -189,8 +189,6 @@ class MasterSlavePyStrokeSide:
             for erg_num in self.race_line:
                 self.master_erg.update_race_data(erg_num)
 
-
-
     def close(self):
         self.master_erg.set_race_operation_type(0x01, 0x06)
         self.master_erg.set_screen_state(0xFF, 0x06)
@@ -209,13 +207,14 @@ if __name__ == "__main__":
     pySS.restore_erg()
     sleep(3)
 
-    pySS.number_all_erg()
-    sleep(5)
+    # pySS.number_all_erg()
+    # sleep(5)
 
     pySS.set_race()
+    #sleep(5)
+
+    pySS.prepare_to_race()
     sleep(5)
-
-
 
     pySS.close()
 
