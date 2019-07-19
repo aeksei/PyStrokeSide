@@ -481,7 +481,7 @@ class PyErgRace(pyrow.PyErg):
         cmd = 'latch_tick_time'
         data = csafe_dic.cmds[cmd]
 
-        message = [[destination, 0x00, 'CSAFE_SETPMDATA_CMD', len(data)]]
+        message = [[destination, 0x00, 'CSAFE_SETPMCFG_CMD', len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))

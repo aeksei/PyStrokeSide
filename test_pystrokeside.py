@@ -17,15 +17,15 @@ class MasterSlavePyStrokeSide:
                                  0x02: "Lane_2"}
 
     def reset_all_erg(self):  # reset all
-        self.master_erg.reset_erg_num()
+        for i in range(3):
+            self.master_erg.reset_erg_num()
 
-        serial = self.master_erg.get_serial_num(0xFD)
-        erg_num = 0x01
-        self.serial_num[erg_num] = serial
-        self.master_erg.set_erg_num(erg_num, serial)
+            serial = self.master_erg.get_serial_num(0xFD)
+            self.serial_num[0x01] = serial
+            self.master_erg.set_erg_num(0x01, serial)
 
-        serial = self.master_erg.get_serial_num(erg_num)
-        self.master_erg.get_erg_num_confirm(erg_num, serial)
+        serial = self.master_erg.get_serial_num(0x01)
+        self.master_erg.get_erg_num_confirm(0x01, serial)
 
     def setting_erg(self, destination, serial):
         self.master_erg.VRPM3Race_100012D0(destination)
@@ -49,7 +49,6 @@ class MasterSlavePyStrokeSide:
         for erg_num, serial in self.serial_num.items():
             self.master_erg.get_race_lane_check(erg_num)
             self.master_erg.set_race_lane_setup(erg_num, self.race_line[erg_num])
-            #sleep(0.25)  # need for correct race_lane setup
             self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
 
         self.master_erg.set_screen_state(0xFF, 0x0e)
@@ -180,12 +179,18 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_start_params(erg_num)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
+        for erg_num in self.race_line:
+            self.master_erg.get_erg_info(erg_num)
+
         # may be 3 times
+
         for i in range(3):
             for erg_num in self.race_line:
                 self.master_erg.get_erg_info(erg_num)
+            sleep(2)
 
-        while True:
+    def process_race_data(self):
+        for i in range(100):
             for erg_num in self.race_line:
                 self.master_erg.update_race_data(erg_num)
 
@@ -207,7 +212,7 @@ if __name__ == "__main__":
     pySS.restore_erg()
     sleep(3)
 
-    # pySS.number_all_erg()
+    #pySS.number_all_erg()
     # sleep(5)
 
     pySS.set_race()
@@ -215,6 +220,10 @@ if __name__ == "__main__":
 
     pySS.prepare_to_race()
     sleep(5)
+
+    pySS.start_race()
+
+    pySS.process_race_data()
 
     pySS.close()
 
