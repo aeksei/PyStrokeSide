@@ -97,7 +97,7 @@ def write(arguments):
             extended_frame = True
             dst = arg[0]
             src = arg[1]
-            cmdprop = csafe_dic.cmds[arg[2]]
+            cmdprop = [arg[2], []]
             cmdprop[1] = [1] * arg[3]
         else:
             cmdprop = csafe_dic.cmds[arg]
