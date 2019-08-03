@@ -84,14 +84,15 @@ cmds['set_race_participant'] = [0x32, [1, 1, 0x00]]  # len(name) + 2, lane, name
 cmds['get_race_participant_count'] = [0x96]
 cmds['get_tick_timebase'] = [0x83]
 cmds['foo'] = [0x1B, 0x04, 0x00, 0x00, 0x00, 0x01, 0xd7]  # unknown function
-cmds['get_latched_tick_time'] = [0xC4]
+cmds['get_latched_tick_time'] = [0xD7, 0xC4]
 cmds['set_all_race_params'] = [0x1D, 0x04, 0x00, 0x00, 0x00, 0x80, 0x1F, 0x04, 0x00, 0x00, 0x02, 0x00, 0x20, 0x04,
                                0x00, 0x00, 0x0F, 0x00, 0x01, 0x01, 0x03, 0x03, 0x05, 0x80, [4], 0x05, 0x05, 0x80,
                                0x00, 0x00, 0x01, 0xF4, 0x09, 0x01, 0x00]  # distance
 cmds['configure_workout'] = [0x14, 0x01, 0x01]
-cmds['latch_tick_time'] = [0xD7, 0xC4]
-# "02 F0 01 00 76 10 0D 0E 00 00 00 00 42 A8 00 00 44 9B 00 00 46 78 6E F2"
-cmds['set_race_start_params'] = [0x0d, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x12, 0xe6, 0x00, 0x00, 0x14, 0x67, 0x00, 0x00, 0x16, 0x08]
+# TODO param for "latch_tick_time" and "set_race_start_params"
+cmds['latch_tick_time'] = [0xC4]  # 02 f0 00 01 01 76 07 d7 c4 04 44 9e 40 00 fd f2
+# 02 f0 01 00 76 10 0d 0e 00 00 00 00 05 41 00 00 07 26 00 00 08 ce c6 f2
+cmds['set_race_start_params'] = [0x0d, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x05, 0x41, 0x00, 0x00, 0x07, 0x26, 0x00, 0x00, 0x08]
 # "02 F0 02 00 76 22 33 1D 00 01 00 00 00 00 00 00 00 00 00 00 02 01 00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 C6 BA BC BB F2"
 cmds['update_race_data'] = [0x33, ]
 
@@ -213,10 +214,10 @@ race_cmds[0x32] = 'set_race_participant'
 race_cmds[0x96] = 'get_race_participant_count'
 race_cmds[0x83] = 'get_tick_timebase'
 race_cmds[0x1B] = 'foo'
-race_cmds[0xC4] = 'get_latched_tick_time'
+race_cmds[0xD7] = 'get_latched_tick_time'
 race_cmds[0x1D] = 'set_all_race_params'
 race_cmds[0x14] = 'configure_workout'
-race_cmds[0xD7] = 'latch_tick_time'
+race_cmds[0xC4] = 'latch_tick_time'
 race_cmds[0x0D] = 'set_race_start_params'
 race_cmds[0x33] = 'update_race_data'
 # TODO unknown commands

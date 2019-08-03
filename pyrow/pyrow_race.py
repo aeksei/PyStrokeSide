@@ -485,7 +485,9 @@ class PyErgRace(pyrow.PyErg):
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
-        self.send(message)
+        resp = self.send(message)
+        if resp:
+            print(resp)
 
     def get_latched_tick_time(self, destination):
         """

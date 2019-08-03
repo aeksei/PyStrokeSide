@@ -172,6 +172,7 @@ class MasterSlavePyStrokeSide:
     def start_race(self):
         self.master_erg.latch_tick_time(0x01)
 
+        # TODO check_flywheels_moving
         for erg_num in self.race_line:
             self.master_erg.get_erg_info(erg_num)
 
@@ -179,15 +180,12 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_start_params(erg_num)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
-        for erg_num in self.race_line:
-            self.master_erg.get_erg_info(erg_num)
-
         # may be 3 times
 
         for i in range(3):
             for erg_num in self.race_line:
                 self.master_erg.get_erg_info(erg_num)
-            sleep(2)
+            sleep(1)
 
     def process_race_data(self):
         for i in range(100):
@@ -219,7 +217,7 @@ if __name__ == "__main__":
     #sleep(5)
 
     pySS.prepare_to_race()
-    sleep(5)
+    sleep(2)
 
     pySS.start_race()
 
