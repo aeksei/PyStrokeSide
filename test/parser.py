@@ -50,6 +50,31 @@ def get_raw_data(file, start="1900-01-01 00:00:00,000", finish="2100-01-01 00:00
     return data
 
 
+def parse_raw_cmd(raw_cmd):
+    line = {}
+    i = 2
+    line['dst'] = raw_cmd[i]
+
+    i += 1  # 3
+    line['src'] = raw_cmd[i]
+
+    i += 1  # 4
+    # skip status answer
+    if raw_cmd[i] == '81' or raw_cmd[i] == '01':
+        i += 1
+    line['common_cmd'] = raw_cmd[i]
+
+    i += 1
+    line['len'] = raw_cmd[i]
+
+    i += 1
+    line['id_cmd'] = raw_cmd[i]
+    line['cmd'] = csafe_dic.race_cmds[int(line['id_cmd'], 16)]
+
+    i += 1
+    line['data'] = ' '.join(raw_cmd[i:-2])
+    return line
+
 def raw_cmd_to_csv(file, save_file=False):
     """
     Convert raw commands to Pandas DataFrame
@@ -60,36 +85,13 @@ def raw_cmd_to_csv(file, save_file=False):
     :return: Pandas DataFrame
     """
 
-    columns = ['dst', 'src', 'common_cmd', 'len', 'id_cmd', 'cmd', 'data']
+    columns = ['cmd', 'dst', 'src', 'common_cmd', 'len', 'id_cmd', 'data']
     df = pd.DataFrame(columns=columns)
 
     with open(file, 'r') as f:
         for s in f:
             raw_cmd = s[:-1].split(" ")
-
-            line = {}
-            i = 2
-            line['dst'] = raw_cmd[i]
-
-            i += 1  # 3
-            line['src'] = raw_cmd[i]
-
-            i += 1  # 4
-            # skip status answer
-            if raw_cmd[i] == '81' or raw_cmd[i] == '01':
-                i += 1
-            line['common_cmd'] = raw_cmd[i]
-
-            i += 1
-            line['len'] = raw_cmd[i]
-
-            i += 1
-            line['id_cmd'] = raw_cmd[i]
-            line['cmd'] = csafe_dic.race_cmds[int(line['id_cmd'], 16)]
-
-            i += 1
-            line['data'] = raw_cmd[i:-2]
-
+            line = parse_raw_cmd(raw_cmd)
             df = df.append(line, ignore_index=True)
 
     if save_file:

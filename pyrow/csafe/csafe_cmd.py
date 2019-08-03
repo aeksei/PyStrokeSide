@@ -8,6 +8,7 @@
 from warnings import warn
 from pyrow.csafe import csafe_dic
 import numpy as np
+from random import randint
 
 
 def cmd2hex(list_int):
@@ -29,6 +30,22 @@ def gen_auth_code(serial):
         v6 = np.uint32(v6 + a3[(v5 >> 11) & 3] + (v5 ^ v8) + ((v8 >> 5) ^ np.uint32(16 * v8)))
 
     return serial + __int2bytes(4, v8)[::-1] + __int2bytes(4, v6)[::-1]
+
+
+def get_start_param():
+    local_2 = 309  # 490 from ida pro
+    v8 = int(randint(0, 32767) * (3000 - 1500) / 32767)
+    v9 = 1500 + local_2 + v8
+    v19 = randint(0, 32767)
+    v8 = int(v19 * (2000 - 1500) / 32767)
+    v10 = 1500 + v9 + v8
+
+    v15 = 256
+    p1 = int(local_2 / 1000 * v15)
+    p2 = int(v9 / 1000 * v15)
+    p3 = int(v10 / 1000 * v15)
+
+    return __int2bytes(4, p1)[::-1] + __int2bytes(4, p2)[::-1] + __int2bytes(4, p3)[::-1]
 
 
 def __int2bytes(numbytes, integer):
@@ -314,3 +331,20 @@ def read(transmission):
 
     return response
 
+
+if __name__ == '__main__':
+    import struct
+
+    hx = '45570000'
+    f = struct.unpack(">f", struct.pack(">i", int(hx, 16)))[0]
+    print(int(f) - 0x0dbf)
+
+    hx = '4594b800'
+    f = struct.unpack(">f", struct.pack(">i", int(hx, 16)))[0]
+    for i in [0x000012e6, 0x00001467, 0x00001608]:
+        print(int(f) - i)
+
+    hx = '44ace000'
+    f = struct.unpack(">f", struct.pack(">i", int(hx, 16)))[0]
+    for i in [0x000005b6, 0x0000080f, 0x000009ae]:
+        print(int(f) - i)

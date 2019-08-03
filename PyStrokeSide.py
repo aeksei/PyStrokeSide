@@ -8,6 +8,7 @@ from usbpcapcmd import USBPcapCMD
 from config import Config
 from config import _bytes2ascii, _bytes2int, _int2bytes
 from loggers import logger, race_logger, raw_logger
+from test.parser import parse_raw_cmd
 
 
 class PyStrokeSide:
@@ -35,6 +36,7 @@ class PyStrokeSide:
         self.race_logger = None
         self.new_race_logger()
         self.raw_logger = raw_logger()
+        self.raw_logger.setLevel("INFO")
 
         self.usbpcapcmd = None
 
@@ -256,7 +258,10 @@ class PyStrokeSide:
             if b"\x02\xf0" in buffer and b"\xf2" in buffer:
                 cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
                 if cmd:
-                    self.raw_logger.debug(_int2bytes(cmd))
+                    raw_cmd = _int2bytes(cmd)
+                    line = parse_raw_cmd(raw_cmd.split(' '))
+                    self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
+                    self.raw_logger.debug(raw_cmd)
                     cmd = self.byte_staffing(cmd)
                     self.handler([c for c in cmd])
 
