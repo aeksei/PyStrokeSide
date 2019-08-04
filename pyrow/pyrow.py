@@ -19,12 +19,17 @@ import sys
 import usb.core
 import usb.util
 from usb import USBError
-import usb.backend.libusb0
-backend = usb.backend.libusb0.get_backend(find_library=lambda x: "C:\\Users\\aeksei\\PycharmProjects\\PyStrokeSide\\libusb\\libusb0.dll")
 
 from pyrow.csafe import csafe_cmd
 import loggers
 from test.parser import parse_raw_cmd
+
+import usb.backend.libusb1
+from ctypes import c_void_p, c_int
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: "libusb-1.0.dll")
+backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
+backend.lib.libusb_set_option(backend.ctx, 1)  # <--- this is the magic call to enable usbdk mode
+
 
 C2_VENDOR_ID = 0x17a4
 MIN_FRAME_GAP = .050 #in seconds

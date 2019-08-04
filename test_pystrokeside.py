@@ -222,9 +222,9 @@ if __name__ == "__main__":
     pySS.wait(3)
 
     # print('number_all_erg')
-    # pySS.number_all_erg()
+    pySS.number_all_erg()
     # print('restore_erg')
-    # pySS.restore_erg()
+    pySS.restore_erg()
     # sleep(5)
 
     print('set race')
