@@ -68,18 +68,20 @@ cmds['set_screen_state'] = [0x13, 0x02, 0x02, [1]]  # state
 cmds['VRPM3Race_100012D0'] = [0x80]
 cmds['call_10001210'] = [0x9a]
 cmds['call_10001400'] = [0x1a, 0x0c, [4, 4, 4]]
-cmds['set_race_idle_params'] = [0x21, 0x08, 0xff, 0xff, 0x38, 0x40, 0x00, 0x05, 0x00, 0x01]
+cmds['set_race_idle_params'] = [0x21, 0x08, 0xff, 0xff, 0x38, 0x40, 0x00, 0x05, 0x00, 0x01,
+                                0x3d, 0x04, 0x00, 0x00, 0x00, 0x00]  # append this
 cmds['set_datetime'] = [0x22, 0x07, 0x0c, 0x0e, 0x01, 0x07, 0x07, 0x07, 0xe3]  # may be year, mouth, day
 cmds['set_screen_error_mode'] = [0x27, 0x01, 0x00]
-cmds['set_cpu_tick_rate'] = [0x25, 0x01, [1]]  # erg address
-cmds['get_cpu_tick_rate'] = [0x9d]
+cmds['set_cpu_tick_rate'] = [0x25, 0x01, [1], 0x9d, 0x83]  # append this
+cmds['get_cpu_tick_rate'] = [0x9d, 0x83]
 cmds['get_erg_info'] = [0x98, 0x87, 0xc9]
 cmds['set_race_starting_physical_address'] = [0x2c, 0x01, 0x01]
 cmds['set_race_operation_type'] = [0x1e, 0x01, [1]]  # state
 cmds['get_race_lane_request'] = [0x51, 0x02, [1], [1]]  # destination and race line
 cmds['set_race_lane_setup'] = [0x0B, 0x02, [1], 0x00]  # race_line
 cmds['get_race_lane_check'] = [0x87]  # erg_enumeration_check function
-cmds['set_workout_type'] = [0x01, [1]]
+cmds['set_workout_type'] = [0x01,
+                            0x00]  # may be don't static
 cmds['set_race_participant'] = [0x32, [1, 1, 0x00]]  # len(name) + 2, lane, name
 cmds['get_race_participant_count'] = [0x96]
 cmds['get_tick_timebase'] = [0x83]

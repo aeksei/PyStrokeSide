@@ -4,6 +4,7 @@ from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
 from pyrow.csafe.csafe_cmd import gen_auth_code
 
 is_debug = True
+import loggers
 
 bytes2int = __bytes2int
 int2bytes = __int2bytes
@@ -191,6 +192,7 @@ class PyErgRace(pyrow.PyErg):
         """
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_idle_params@@YAFGGGGG@Z
         02 f0 01 00 76 0a 21 08 ff ff 38 40 00 05 00 01 29 f2
+                             08 ff ff 38 40 00 05 00 01 3d 04 00 00 00 00
         :return:
         """
         cmd = 'set_race_idle_params'
@@ -240,13 +242,9 @@ class PyErgRace(pyrow.PyErg):
         :return:
         """
         cmd = 'set_cpu_tick_rate'
-        data = csafe_dic.cmds[cmd][:-1]
-        # TODO fix this
-        if isinstance(state, list):
-            data.extend(state)
-            state = state[0]
-        else:
-            data.append(state)
+        data = csafe_dic.cmds[cmd]
+        data[2] = state
+
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
 
@@ -402,7 +400,7 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'set_workout_type'
         data = csafe_dic.cmds[cmd]
-        data[-1] = state
+        # data[-1] = state
 
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
@@ -485,9 +483,7 @@ class PyErgRace(pyrow.PyErg):
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
-        resp = self.send(message)
-        if resp:
-            print(resp)
+        self.send(message)
 
     def get_latched_tick_time(self, destination):
         """
@@ -504,7 +500,6 @@ class PyErgRace(pyrow.PyErg):
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
-        self.send(message)
 
     def set_race_start_params(self, destination):
         """

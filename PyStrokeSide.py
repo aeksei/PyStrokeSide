@@ -259,8 +259,12 @@ class PyStrokeSide:
                 cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
                 if cmd:
                     raw_cmd = _int2bytes(cmd)
-                    line = parse_raw_cmd(raw_cmd.split(' '))
-                    self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
+                    try:
+                        line = parse_raw_cmd(raw_cmd.split(' '))
+                        self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
+                    except Exception as e:
+                        self.raw_logger.warning(e)
+                        self.raw_logger.warning(raw_cmd)
                     self.raw_logger.debug(raw_cmd)
                     cmd = self.byte_staffing(cmd)
                     self.handler([c for c in cmd])

@@ -32,7 +32,7 @@ class MasterSlavePyStrokeSide:
         self.master_erg.call_10001210(destination)
         self.master_erg.call_10001400(destination, serial)
         self.master_erg.set_datetime(destination)
-        self.master_erg.set_race_idle_params(destination)
+        self.master_erg.set_race_idle_params(destination)  # TODO check param
 
         self.master_erg.set_screen_error_mode(destination)
         self.master_erg.set_cpu_tick_rate(destination, 0x01)
@@ -58,8 +58,9 @@ class MasterSlavePyStrokeSide:
         self.setting_erg(0x01, self.serial_num[0x01])
         self.restore_slave_erg()
 
-        self.master_erg.set_race_starting_physical_address(0x01)
         self.master_erg.set_race_operation_type(0x01, 0x04)
+        self.master_erg.set_race_starting_physical_address(0x01)
+
         self.master_erg.set_race_starting_physical_address(0xFF)
         self.master_erg.set_race_operation_type(0xFF, 0x04)
 
@@ -148,7 +149,7 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_operation_type(erg_num, [0x06, 0x9d, 0x83])
 
         for erg_num in self.race_line:
-            self.master_erg.set_cpu_tick_rate(erg_num, [0x02, 0x9d, 0x83])
+            self.master_erg.set_cpu_tick_rate(erg_num, 0x02)
 
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x07)
@@ -156,7 +157,7 @@ class MasterSlavePyStrokeSide:
         self.master_erg.foo(0xff)
 
         for erg_num in self.race_line:
-            self.master_erg.get_latched_tick_time(erg_num)
+            self.master_erg.latch_tick_time(erg_num)
 
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
@@ -170,7 +171,7 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
     def start_race(self):
-        self.master_erg.latch_tick_time(0x01)
+        latched_time = self.master_erg.get_latched_tick_time(0x01)
 
         # TODO check_flywheels_moving
         for erg_num in self.race_line:
@@ -207,21 +208,28 @@ class MasterSlavePyStrokeSide:
 
 if __name__ == "__main__":
     pySS = MasterSlavePyStrokeSide()
+    print('restore_erg')
     pySS.restore_erg()
     sleep(3)
 
-    #pySS.number_all_erg()
+    # print('number_all_erg')
+    # pySS.number_all_erg()
+    # print('restore_erg')
+    # pySS.restore_erg()
     # sleep(5)
 
+    print('set race')
     pySS.set_race()
-    #sleep(5)
+    sleep(5)
 
+    print('prepare to race')
     pySS.prepare_to_race()
     sleep(2)
 
-    pySS.start_race()
+    #pySS.start_race()
 
-    pySS.process_race_data()
+    #pySS.process_race_data()
 
+    print('close')
     pySS.close()
 

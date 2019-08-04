@@ -24,6 +24,7 @@ backend = usb.backend.libusb0.get_backend(find_library=lambda x: "C:\\Users\\aek
 
 from pyrow.csafe import csafe_cmd
 import loggers
+from test.parser import parse_raw_cmd
 
 C2_VENDOR_ID = 0x17a4
 MIN_FRAME_GAP = .050 #in seconds
@@ -444,14 +445,18 @@ class PyErg(object):
                 raise ConnectionError("USB device disconected")
         #records time when message was sent
         self.__lastsend = datetime.datetime.now()
-        self.raw_logger.info(csafe_cmd.cmd2hex(csafe))  # logging raw csafe command
+        raw_cmd = csafe_cmd.cmd2hex(csafe)
+        self.raw_logger.info(raw_cmd)  # logging raw csafe command
+        self.debug_raw_cmd(raw_cmd)
 
         response = []
         while not response:
             try:
                 #recieves byte array from erg
                 transmission = self.erg.read(self.inEndpoint, length, timeout=100)
-                self.raw_logger.info(csafe_cmd.cmd2hex(transmission))  # logging raw csafe response
+                raw_cmd = csafe_cmd.cmd2hex(transmission)
+                self.raw_logger.info(raw_cmd)  # logging raw csafe response
+                self.debug_raw_cmd(raw_cmd)
                 response = csafe_cmd.read(transmission)
             except Exception as e:
                 return response
@@ -462,3 +467,11 @@ class PyErg(object):
 
         #convers byte array to response dictionary
         return response
+
+    def debug_raw_cmd(self, raw_cmd):
+        try:
+            line = parse_raw_cmd(raw_cmd[:raw_cmd.find('F2')+2].split(' '))
+            self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
+        except Exception as e:
+            self.raw_logger.warning(e)
+            self.raw_logger.warning(raw_cmd)
