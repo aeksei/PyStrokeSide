@@ -8,8 +8,9 @@ class MasterSlavePyStrokeSide:
 
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
-        self.serial_num = {0x01: [0x19, 0xa6, 0x84, 0x95],
-                           0x02: [0x19, 0xa6, 0x84, 0xda]}
+
+        self.serial_num = {0x01: 430343317,
+                           0x02: 430343386}
         self.race_line = {0x01: 0x01,
                           0x02: 0x02}
 
@@ -83,9 +84,9 @@ class MasterSlavePyStrokeSide:
 
         while True:
             resp = pySS.master_erg.get_race_lane_request()
-            if 'CSAFE_GETPMCFG_CMD' in resp:
-                erg_num = resp['CSAFE_GETPMCFG_CMD'][2]
-                serial = resp['CSAFE_GETPMCFG_CMD'][3:-1]
+            if resp:
+                erg_num = resp[0]
+                serial = resp[1]
 
                 if erg_num == 0xFD:
                     erg_num = len(self.serial_num) + 1

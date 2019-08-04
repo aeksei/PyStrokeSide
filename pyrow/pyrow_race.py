@@ -67,7 +67,7 @@ class PyErgRace(pyrow.PyErg):
                 self.raw_logger.debug('Erg {:02X} have {} serial num ({})'.format(destination,
                                                                                   bytes2int(serial),
                                                                                   serial))
-                return serial
+                return bytes2int(serial)
 
     def set_erg_num(self, erg_num, serial_num):
         """
@@ -76,21 +76,21 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'set_erg_num'
         data = csafe_dic.cmds[cmd][:-1]
-        data.extend(serial_num)
+        data.extend(int2bytes(4, serial_num)[::-1])
         data.append(erg_num)
 
         if self._erg_num == 0xFD:
             self.raw_logger.debug('Erg {:02X} {} {:02X} to erg {}'.format(self._erg_num,
                                                                           cmd,
                                                                           erg_num,
-                                                                          bytes2int(serial_num[::-1])))
+                                                                          serial_num))
             destination = self._erg_num
             self._erg_num = erg_num
         else:
             self.raw_logger.debug('Erg {:02X} {} {:02X} to erg {}'.format(self._erg_num,
                                                                           cmd,
                                                                           erg_num,
-                                                                          bytes2int(serial_num[::-1])))
+                                                                          serial_num))
             destination = 0xFF
 
         message = [[destination, 0x00, 0x7E, len(data)]]
@@ -107,13 +107,13 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'get_erg_num_confirm'
         data = csafe_dic.cmds[cmd][:-1]
-        data.extend(serial_num)
+        data.extend(int2bytes(4, serial_num)[::-1])
 
         message = [[destination, 0x00, 0x7E, len(data)]]
         message.extend(data)
         self.raw_logger.debug('Erg {:02X} {} from erg {} with address {:02X}'.format(self._erg_num,
                                                                                      cmd,
-                                                                                     bytes2int(serial_num[::-1]),
+                                                                                     serial_num,
                                                                                      destination))
         self.send(message)
         """
@@ -352,7 +352,12 @@ class PyErgRace(pyrow.PyErg):
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num,
                                                                    cmd,
                                                                    destination))
-        return self.send(message)
+        resp = self.send(message)
+        if 'CSAFE_GETPMCFG_CMD' in resp:
+            erg_num = resp['CSAFE_GETPMCFG_CMD'][2]
+            serial = bytes2int(resp['CSAFE_GETPMCFG_CMD'][3:-1])
+            return erg_num, serial
+        return ()
 
     def set_race_lane_setup(self, destination, race_line):
         """
