@@ -1,6 +1,7 @@
 from pyrow import pyrow
 from pyrow.pyrow_race import PyErgRace
 from time import sleep
+from pyrow.csafe.csafe_cmd import get_start_param
 
 
 class MasterSlavePyStrokeSide:
@@ -171,22 +172,18 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
     def start_race(self):
-        latched_time = self.master_erg.get_latched_tick_time(0x01)
-
+        latch_time = self.master_erg.get_latched_tick_time(0x01)
         # TODO check_flywheels_moving
         for erg_num in self.race_line:
             self.master_erg.get_erg_info(erg_num)
 
+        params = get_start_param(latch_time)
         for erg_num in self.race_line:
-            self.master_erg.set_race_start_params(erg_num)
+            self.master_erg.set_race_start_params(erg_num, params)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
         # may be 3 times
-
-        for i in range(3):
-            for erg_num in self.race_line:
-                self.master_erg.get_erg_info(erg_num)
-            sleep(1)
+        pySS.wait(4)
 
     def process_race_data(self):
         for i in range(100):
@@ -205,12 +202,24 @@ class MasterSlavePyStrokeSide:
         self.master_erg.set_screen_state(0xFF, 0x27)
         self.master_erg.set_race_operation_type(0xFF, 0x00)
 
+    def wait(self, time=0):
+        if time:
+            for _ in range(time):
+                for erg_num in self.race_line:
+                    self.master_erg.get_erg_info(erg_num)
+                sleep(1)
+        else:
+            while True:
+                for erg_num in self.race_line:
+                    self.master_erg.get_erg_info(erg_num)
+                sleep(1)
+
 
 if __name__ == "__main__":
     pySS = MasterSlavePyStrokeSide()
     print('restore_erg')
     pySS.restore_erg()
-    sleep(3)
+    pySS.wait(3)
 
     # print('number_all_erg')
     # pySS.number_all_erg()
@@ -220,15 +229,15 @@ if __name__ == "__main__":
 
     print('set race')
     pySS.set_race()
-    sleep(5)
+    pySS.wait(5)
 
     print('prepare to race')
     pySS.prepare_to_race()
-    sleep(2)
+    pySS.wait(10)
 
-    #pySS.start_race()
+    pySS.start_race()
 
-    #pySS.process_race_data()
+    pySS.process_race_data()
 
     print('close')
     pySS.close()

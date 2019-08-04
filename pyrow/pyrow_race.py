@@ -4,7 +4,7 @@ from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
 from pyrow.csafe.csafe_cmd import gen_auth_code
 
 is_debug = True
-import loggers
+
 
 bytes2int = __bytes2int
 int2bytes = __int2bytes
@@ -500,8 +500,11 @@ class PyErgRace(pyrow.PyErg):
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        resp = self.send(message)
 
-    def set_race_start_params(self, destination):
+        return resp['CSAFE_SETPMCFG_CMD'][-4:]
+
+    def set_race_start_params(self, destination, params):
         """
         1000CFD5
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_start_params@@YAFGEEKKK@Z
@@ -511,6 +514,8 @@ class PyErgRace(pyrow.PyErg):
         """
         cmd = 'set_race_start_params'
         data = csafe_dic.cmds[cmd]
+        data = data[:-1]
+        data.extend(params)
 
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)

@@ -8,6 +8,7 @@
 from warnings import warn
 from pyrow.csafe import csafe_dic
 import numpy as np
+import struct as st
 from random import randint
 
 
@@ -32,7 +33,7 @@ def gen_auth_code(serial):
     return serial + __int2bytes(4, v8)[::-1] + __int2bytes(4, v6)[::-1]
 
 
-def get_start_param():
+def get_start_param(latch_time):
     local_2 = 309  # 490 from ida pro
     v8 = int(randint(0, 32767) * (3000 - 1500) / 32767)
     v9 = 1500 + local_2 + v8
@@ -44,6 +45,13 @@ def get_start_param():
     p1 = int(local_2 / 1000 * v15)
     p2 = int(v9 / 1000 * v15)
     p3 = int(v10 / 1000 * v15)
+
+    hx = cmd2hex(latch_time).replace(' ', '')
+    latch_time = int(st.unpack(">f", st.pack(">i", int(hx, 16)))[0])
+
+    p1 += latch_time
+    p2 += latch_time
+    p3 += latch_time
 
     return __int2bytes(4, p1)[::-1] + __int2bytes(4, p2)[::-1] + __int2bytes(4, p3)[::-1]
 
