@@ -2,21 +2,20 @@ from pyrow import pyrow
 from pyrow.pyrow_race import PyErgRace
 from time import sleep
 from pyrow.csafe.csafe_cmd import get_start_param
+from config import Config
 
 
 class MasterSlavePyStrokeSide:
 
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
+        self.config = Config()
 
-        self.serial_num = {0x01: 430343317,
-                           0x02: 430343386}
-        self.race_line = {0x01: 0x01,
-                          0x02: 0x02}
+        self.serial_num = self.config['serial_num']
+        self.race_line = self.config['race_line']
 
-        self.race_name = "test_race"
-        self.race_participant = {0x01: "Lane_1",
-                                 0x02: "Lane_2"}
+        self.race_name = self.config['race_name']
+        self.race_participant = self.config['race_participant']
 
     def reset_all_erg(self):  # reset all
         for i in range(3):
