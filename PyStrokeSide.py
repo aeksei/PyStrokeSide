@@ -5,10 +5,13 @@ import socketio
 from datetime import datetime
 from usbpcapcmd import USBPcapCMD
 
-from config import Config
-from config import _bytes2ascii, _bytes2int, _int2bytes
+from pyrow.csafe.csafe_cmd import __bytes2ascii, __bytes2int, cmd2hex
 from loggers import logger, race_logger, raw_logger
 from test.parser import parse_raw_cmd
+
+_bytes2int = __bytes2int
+_int2bytes = cmd2hex
+_bytes2ascii = __bytes2ascii
 
 
 class PyStrokeSide:
@@ -30,8 +33,8 @@ class PyStrokeSide:
         self.timeout = 0
 
         self.logger = logger('PyStrokeSide')
-        self.config = Config()
-        self.restore_config()
+        #self.config = Config()
+        #self.restore_config()
 
         self.race_logger = None
         self.new_race_logger()

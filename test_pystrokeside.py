@@ -23,9 +23,18 @@ class MasterSlavePyStrokeSide:
             self.master_erg.reset_erg_num()
             self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
 
-        if 0x01 not in self.serial_num:
-            self.serial_num[0x01] = self.master_erg.get_serial_num(0x01)
-        self.master_erg.get_erg_num_confirm(0x01, self.serial_num[0x01])  # TODO check confirm from master erg
+        serial = self.master_erg.get_serial_num(0x01)
+        if 0x01 in self.serial_num:
+            if serial != self.serial_num[0x01]:
+                self.serial_num.clear()
+                self.race_line.clear()
+                self.serial_num[0x01] = serial
+        else:
+            self.serial_num[0x01] = serial
+        
+        self.master_erg.get_erg_num_confirm(0x01, self.serial_num[0x01])
+
+    # TODO check confirm from master erg
         # TODO procedure when master erg missing
 
     def setting_erg(self, destination, serial):
@@ -47,10 +56,12 @@ class MasterSlavePyStrokeSide:
                 self.setting_erg(erg_num, serial)
 
     def restore_race_line(self):
-        for erg_num, serial in self.serial_num.items():
+        if not self.race_line:
+            self.race_line[0x01] = 0x01
+        for erg_num, race_line in self.race_line.items():
             self.master_erg.get_race_lane_check(erg_num)
-            self.master_erg.set_race_lane_setup(erg_num, self.race_line[erg_num])
-            self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
+            self.master_erg.set_race_lane_setup(erg_num, race_line)
+            self.master_erg.get_race_lane_request(erg_num, race_line)
 
         self.master_erg.set_screen_state(0xFF, 0x0e)
 
@@ -68,9 +79,11 @@ class MasterSlavePyStrokeSide:
         self.master_erg.set_screen_state(0xFF, 0x07)
         self.restore_race_line()
 
+        self.master_erg.set_screen_state(0xFF, 0x0E)
+
     def number_all_erg(self):
-        self.serial_num = {}
-        self.race_line = {}
+        self.serial_num.clear()
+        self.race_line.clear()
         self.reset_all_erg()
 
         self.master_erg.set_race_starting_physical_address(0x01)
@@ -102,7 +115,7 @@ class MasterSlavePyStrokeSide:
                 self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
 
             # make stop search
-            if len(self.race_line) == 2:
+            if len(self.race_line) == 3:
                 self.config['serial_num'] = self.serial_num
                 self.config['race_line'] = self.race_line
                 break
@@ -227,8 +240,9 @@ if __name__ == "__main__":
     pySS.number_all_erg()
     # print('restore_erg')
     pySS.restore_erg()
-    # sleep(5)
+    sleep(5)
 
+    """
     print('set race')
     pySS.set_race()
     pySS.wait(5)
@@ -240,7 +254,7 @@ if __name__ == "__main__":
     pySS.start_race()
 
     pySS.process_race_data()
-
+    """
     print('close')
     pySS.close()
 
