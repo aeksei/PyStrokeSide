@@ -13,10 +13,10 @@ class Config:
         if self.filename not in os.listdir(self.HOME_DIR):
             self.create()
         else:
-            self.read()
+            self.restore()
 
     def __setitem__(self, key, value):
-        self.data.update((key, value))
+        self.data[key] = value
         self.write()
 
     def __getitem__(self, item):
@@ -37,19 +37,14 @@ class Config:
         with open(self.filename, "w") as write_file:
             json.dump(self.data, write_file, indent=4)
 
-    def read(self):
+    def restore(self):
         with open(self.filename, "r") as read_file:
-            self.data = json.load(read_file, object_pairs_hook=self.keystoint)
+            self.data = json.load(read_file, object_hook=self.keystoint)
 
-    def keystoint(self, x):
-        for key, value in x:
-            if key.isnumeric():
-                return {int(k): v for k, v in x}
-            else:
-                return x
+    def keystoint(self, d):
+        return {int(k) if k.lstrip('-').isdigit() else k: v for k, v in d.items()}
 
 
 if __name__ == "__main__":
     config = Config()
-    config['serial_num'] = {0x01: 123, 0x02: 456}
     print(config.data)
