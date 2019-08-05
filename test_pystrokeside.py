@@ -24,18 +24,14 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
 
         serial = self.master_erg.get_serial_num(0x01)
-        if 0x01 in self.serial_num:
-            if serial != self.serial_num[0x01]:
-                self.serial_num.clear()
-                self.race_line.clear()
-                self.serial_num[0x01] = serial
-        else:
+        if 0x01 not in self.serial_num:  # number_all_erg
             self.serial_num[0x01] = serial
-        
-        self.master_erg.get_erg_num_confirm(0x01, self.serial_num[0x01])
+        elif serial != self.serial_num[0x01]:  # change cable on master_erg
+            self.serial_num.clear()
+            self.race_line.clear()
+            self.serial_num[0x01] = serial
 
-    # TODO check confirm from master erg
-        # TODO procedure when master erg missing
+        self.master_erg.get_erg_num_confirm(0x01, self.serial_num[0x01])
 
     def setting_erg(self, destination, serial):
         self.master_erg.VRPM3Race_100012D0(destination)
