@@ -13,6 +13,7 @@ class MasterSlavePyStrokeSide:
 
         self.serial_num = self.config['serial_num']
         self.race_line = self.config['race_line']
+        self.missing_ergs = []  # may be use for setting erg
 
         self.race_name = self.config['race_name']
         self.race_participant = self.config['race_participant']
@@ -20,13 +21,12 @@ class MasterSlavePyStrokeSide:
     def reset_all_erg(self):  # reset all
         for i in range(3):
             self.master_erg.reset_erg_num()
+            self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
 
-            serial = self.master_erg.get_serial_num(0xFD)
-            self.serial_num[0x01] = serial
-            self.master_erg.set_erg_num(0x01, serial)
-
-        serial = self.master_erg.get_serial_num(0x01)
-        self.master_erg.get_erg_num_confirm(0x01, serial)
+        if 0x01 not in self.serial_num:
+            self.serial_num[0x01] = self.master_erg.get_serial_num(0x01)
+        self.master_erg.get_erg_num_confirm(0x01, self.serial_num[0x01])  # TODO check confirm from master erg
+        # TODO procedure when master erg missing
 
     def setting_erg(self, destination, serial):
         self.master_erg.VRPM3Race_100012D0(destination)
@@ -103,6 +103,8 @@ class MasterSlavePyStrokeSide:
 
             # make stop search
             if len(self.race_line) == 2:
+                self.config['serial_num'] = self.serial_num
+                self.config['race_line'] = self.race_line
                 break
         # press "Done numbering"
 
