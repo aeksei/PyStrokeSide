@@ -6,7 +6,6 @@ from config import Config
 
 
 class MasterSlavePyStrokeSide:
-
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
         self.config = Config()
@@ -17,6 +16,8 @@ class MasterSlavePyStrokeSide:
 
         self.race_name = self.config['race_name']
         self.race_participant = self.config['race_participant']
+
+        self.distance = 1000
 
     def reset_all_erg(self):  # reset all
         for i in range(3):
@@ -90,14 +91,14 @@ class MasterSlavePyStrokeSide:
 
         self.master_erg.set_screen_state(0xFF, 0x01)
 
-        while True:
+        while True:  # ToDo may me make missing_erg function
             resp = pySS.master_erg.get_race_lane_request()
             if resp:
                 erg_num = resp[0]
                 serial = resp[1]
 
                 if erg_num == 0xFD:
-                    erg_num = len(self.serial_num) + 1
+                    erg_num = len(self.serial_num) + 1  # ToDo may be make check min(erg_num)
                     self.serial_num[erg_num] = serial  # new erg num for erg lane request
                     self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
 
@@ -122,6 +123,7 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_participant(erg_num, 0x00, self.race_name)
 
     def set_participant_name(self):
+        # TODO by participant name
         for erg_num, erg_line in self.race_line.items():
             self.master_erg.set_race_participant(0xFF, erg_line, self.race_participant[erg_num])
 
@@ -132,9 +134,9 @@ class MasterSlavePyStrokeSide:
                     self.master_erg.set_race_participant(check_erg_num, erg_line, self.race_participant[erg_num])
 
     def set_race(self):
+        # TODO by participant name
         for erg_num in self.race_line:
             self.master_erg.set_screen_state(erg_num, 0x08)
-
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
 
@@ -143,61 +145,50 @@ class MasterSlavePyStrokeSide:
 
         for erg_num in self.race_line:
             self.master_erg.set_screen_state(erg_num, 0x27)
-
         # TODO CSAFE_SETCALORIES_CMD
-
         for erg_num in self.race_line:
             self.master_erg.set_screen_state(erg_num, 0x1f)
-
         for erg_num in self.race_line:
             self.master_erg.set_workout_type(erg_num, 0x00)
             self.master_erg.set_screen_state(erg_num, 0x03)
-
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x0C)
 
     def prepare_to_race(self):
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, [0x06, 0x9d, 0x83])
-
         for erg_num in self.race_line:
             self.master_erg.set_cpu_tick_rate(erg_num, 0x02)
-
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x07)
-
         self.master_erg.foo(0xff)
-
         for erg_num in self.race_line:
             self.master_erg.latch_tick_time(erg_num)
-
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
-
         for erg_num in self.race_line:
-            self.master_erg.set_all_race_params(erg_num, 2000)
+            self.master_erg.set_all_race_params(erg_num, self.distance)
             self.master_erg.configure_workout(erg_num)
             self.master_erg.set_screen_state(erg_num, 0x04)
-
         for erg_num in self.race_line:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
     def start_race(self):
-        latch_time = self.master_erg.get_latched_tick_time(0x01)
+        # latch_time = self.master_erg.get_latched_tick_time(0x01)  # as in erg_race
         # TODO check_flywheels_moving
         for erg_num in self.race_line:
             self.master_erg.get_erg_info(erg_num)
 
+        latch_time = self.master_erg.get_latched_tick_time(0x01)
         params = get_start_param(latch_time)
         for erg_num in self.race_line:
             self.master_erg.set_race_start_params(erg_num, params)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
-        # may be 3 times
-        pySS.wait(4)
+        pySS.wait(4)  # TODO check false start
 
     def process_race_data(self):
-        for i in range(100):
+        for i in range(10):
             for erg_num in self.race_line:
                 self.master_erg.update_race_data(erg_num)
 
@@ -231,7 +222,7 @@ if __name__ == "__main__":
     print('restore_erg')
     pySS.restore_erg()
     pySS.wait(3)
-
+    """
     # print('number_all_erg')
     pySS.number_all_erg()
     # print('restore_erg')
@@ -250,7 +241,7 @@ if __name__ == "__main__":
     pySS.start_race()
 
     pySS.process_race_data()
-    """
+
     print('close')
     pySS.close()
 
