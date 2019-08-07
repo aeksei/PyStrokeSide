@@ -1,8 +1,10 @@
-from pyrow import pyrow
-from pyrow.pyrow_race import PyErgRace
+import sys
 from time import sleep
-from pyrow.csafe.csafe_cmd import get_start_param
+from pyrow import pyrow
 from config import Config
+from pyrow.pyrow_race import PyErgRace
+from pyrow.csafe.csafe_cmd import get_start_param
+
 
 
 class MasterSlavePyStrokeSide:
@@ -217,11 +219,19 @@ class MasterSlavePyStrokeSide:
                 sleep(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     pySS = MasterSlavePyStrokeSide()
-    print('restore_erg')
     pySS.restore_erg()
+    print('restore_erg')
     pySS.wait(3)
+    while True:
+        line = sys.stdin.readline().rstrip()
+        if line:
+            sys.stdout.write(line + '\n')
+        else:
+            sys.stdout.flush()
+            sleep(1)
+
     """
     # print('number_all_erg')
     pySS.number_all_erg()
