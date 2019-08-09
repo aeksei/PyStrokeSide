@@ -6,7 +6,6 @@ from pyrow.pyrow_race import PyErgRace
 from pyrow.csafe.csafe_cmd import get_start_param
 
 
-
 class MasterSlavePyStrokeSide:
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
