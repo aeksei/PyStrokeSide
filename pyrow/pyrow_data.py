@@ -46,15 +46,18 @@ class PyErgRaceData:
 
         length = len(leader_board)
         if length != 24:
-            leader_board.extend([0]*(24 - length))
+            leader_board.extend([0] * (24 - length))
 
         return leader_board
 
+    def set_update_race_data(self, line_number, resp):
+        distance = round(_bytes2int(resp[7:11]) * 0.1, 1)  # dist * 10
+        time = round(_bytes2int(resp[13:17]) * 0.01, 2)  # time * 100
+        stroke = resp[17]  # stroke
+        split = round(500 * (time / distance) if distance != 0 else 0, 2)
 
-
-
-
-
-
-
-
+        self.race_data[line_number] = dict(lane_number=line_number,
+                                           distance=distance,
+                                           time=time,
+                                           stroke=stroke,
+                                           split=split)

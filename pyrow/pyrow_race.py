@@ -560,7 +560,7 @@ class PyErgRace(pyrow.PyErg):
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
 
-    def update_race_data(self, destination):
+    def update_race_data(self, destination, cmd_data):
         """
         1000DF53
         VRPM3Csafe.?tkcmdsetCSAFE_update_race_data@@YAFGPAUTKCMDSET_PM3_RACE_DATA@@PAUTKCMDSET_OVERALL_RACE_DATA@@@Z
@@ -572,9 +572,11 @@ class PyErgRace(pyrow.PyErg):
         # TODO top of user
         cmd = 'update_race_data'
         data = csafe_dic.cmds[cmd]
+        data = data[:2] + cmd_data + data[3:]
 
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
 
         self.raw_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
-        self.send(message)
+        resp = self.send(message)
+        return resp['CSAFE_SETPMCFG_CMD']

@@ -96,7 +96,7 @@ cmds['latch_tick_time'] = [0xC4]  # 02 f0 00 01 01 76 07 d7 c4 04 44 9e 40 00 fd
 # 02 f0 01 00 76 10 0d 0e 00 00 00 00 05 41 00 00 07 26 00 00 08 ce c6 f2
 cmds['set_race_start_params'] = [0x0d, 0x0e, 0x00, 0x00, [12]]
 # "02 F0 02 00 76 22 33 1D 00 01 00 00 00 00 00 00 00 00 00 00 02 01 00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 C6 BA BC BB F2"
-cmds['update_race_data'] = [0x33, 0x1d, [24], 0xc6, 0xba, 0xbc]
+cmds['update_race_data'] = [0x33, 0x1d, [24], 0x00, 0x00, 0x00, 0x00, 0x00, 0xc6, 0xba, 0xbc, 0xaf]
 
 
 # PM3 Specific Short Commands
