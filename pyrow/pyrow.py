@@ -12,16 +12,17 @@ pyrow.py
 Interface to concept2 indoor rower
 """
 
-import datetime
-import time
 import sys
+import time
+import json
+import logging
+import datetime
 
 import usb.core
 import usb.util
 from usb import USBError
 
 from pyrow.csafe import csafe_cmd
-import loggers
 from test.parser import parse_raw_cmd
 
 import usb.backend.libusb1
@@ -161,8 +162,9 @@ class PyErg(object):
         Configures usb connection and sets erg value
         """
         from warnings import warn
-
-        self.raw_logger = loggers.raw_logger()
+        with open("logging.conf", "r") as f:
+            logging.config.dictConfig(json.load(f))
+        self.pyrow_logger = logging.getLogger("pyrow")
 
         if sys.platform != 'win32':
             try:
@@ -195,7 +197,7 @@ class PyErg(object):
         iface = configuration[(0, 0)]
         self.inEndpoint = iface[0].bEndpointAddress
         self.outEndpoint = iface[1].bEndpointAddress
-        self.raw_logger.debug("Erg is configure")
+        self.pyrow_logger.info("Erg is configure")
 
         self.__lastsend = datetime.datetime.now()
 
@@ -451,7 +453,7 @@ class PyErg(object):
         #records time when message was sent
         self.__lastsend = datetime.datetime.now()
         raw_cmd = csafe_cmd.cmd2hex(csafe)
-        self.raw_logger.info(raw_cmd)  # logging raw csafe command
+        self.pyrow_logger.info(raw_cmd)  # logging raw csafe command
         self.debug_raw_cmd(raw_cmd)
 
         response = []
@@ -460,7 +462,7 @@ class PyErg(object):
                 #recieves byte array from erg
                 transmission = self.erg.read(self.inEndpoint, length, timeout=100)
                 raw_cmd = csafe_cmd.cmd2hex(transmission)
-                self.raw_logger.info(raw_cmd)  # logging raw csafe response
+                self.pyrow_logger.info(raw_cmd)  # logging raw csafe response
                 self.debug_raw_cmd(raw_cmd)
                 response = csafe_cmd.read(transmission)
             except Exception as e:
@@ -476,7 +478,7 @@ class PyErg(object):
     def debug_raw_cmd(self, raw_cmd):
         try:
             line = parse_raw_cmd(raw_cmd[:raw_cmd.find('F2')+2].split(' '))
-            self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
+            self.pyrow_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
         except Exception as e:
-            self.raw_logger.warning(e)
-            self.raw_logger.warning(raw_cmd)
+            self.pyrow_logger.warning(e)
+            self.pyrow_logger.warning(raw_cmd)
