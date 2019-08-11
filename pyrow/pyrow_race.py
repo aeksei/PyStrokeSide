@@ -200,8 +200,9 @@ class PyErgRace(pyrow.PyErg):
         :return:
         """
         cmd = 'set_datetime'
-        # TODO datetime
         data = csafe_dic.cmds[cmd]
+        data = data[:-1]
+        data.extend(get_time_cmd())
 
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
