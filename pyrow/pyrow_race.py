@@ -410,7 +410,7 @@ class PyErgRace(pyrow.PyErg):
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
 
-    def set_race_participant(self, destination, lane, name):
+    def set_race_participant(self, destination, lane_number, name):
         """
         00BBB81F
         VRPM3Csafe.?tkcmdsetCSAFE_set_race_participant@@YAFGGPAD@Z
@@ -421,14 +421,17 @@ class PyErgRace(pyrow.PyErg):
         data = csafe_dic.cmds[cmd][:-1]
         hex_name = [ord(c) for c in name]
         hex_name.append(0x00)
-        hex_name.insert(0, lane)
+        hex_name.insert(0, lane_number)
         hex_name.insert(0, len(hex_name))
         data.extend(hex_name)
 
         message = [[destination, 0x00, 0x77, len(data)]]
         message.extend(data)
 
-        self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.pyrow_race_logger.debug('Erg {:02X} {} name: {} to erg with line number {:02X} '.format(self._erg_num,
+                                                                                                     cmd,
+                                                                                                     name,
+                                                                                                     lane_number))
         self.send(message)
 
     def get_race_participant_count(self, destination):
