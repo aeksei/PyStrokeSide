@@ -6,7 +6,6 @@ from pyrow.pyrow_race import PyErgRace
 from pyrow.csafe.csafe_cmd import get_start_param
 
 
-
 class MasterSlavePyStrokeSide:
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
@@ -114,7 +113,7 @@ class MasterSlavePyStrokeSide:
                 self.master_erg.get_race_lane_request(erg_num, self.race_line[erg_num])
 
             # make stop search
-            if len(self.race_line) == 3:
+            if len(self.race_line) == 2:
                 self.config['serial_num'] = self.serial_num
                 self.config['race_line'] = self.race_line
                 break
@@ -224,6 +223,7 @@ if __name__ == '__main__':
     pySS.restore_erg()
     print('restore_erg')
     pySS.wait(3)
+    """
     while True:
         line = sys.stdin.readline().rstrip()
         if line:
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     pySS.start_race()
 
     pySS.process_race_data()
-
+    """
     print('close')
     pySS.close()
 

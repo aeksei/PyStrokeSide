@@ -15,7 +15,7 @@ Interface to concept2 indoor rower
 import sys
 import time
 import json
-import logging
+import logging.config
 import datetime
 
 import usb.core
@@ -453,7 +453,7 @@ class PyErg(object):
         #records time when message was sent
         self.__lastsend = datetime.datetime.now()
         raw_cmd = csafe_cmd.cmd2hex(csafe)
-        self.pyrow_logger.info(raw_cmd)  # logging raw csafe command
+        self.pyrow_logger.debug(raw_cmd)  # logging raw csafe command
         self.debug_raw_cmd(raw_cmd)
 
         response = []
@@ -462,7 +462,7 @@ class PyErg(object):
                 #recieves byte array from erg
                 transmission = self.erg.read(self.inEndpoint, length, timeout=100)
                 raw_cmd = csafe_cmd.cmd2hex(transmission)
-                self.pyrow_logger.info(raw_cmd)  # logging raw csafe response
+                self.pyrow_logger.debug(raw_cmd)  # logging raw csafe response
                 self.debug_raw_cmd(raw_cmd)
                 response = csafe_cmd.read(transmission)
             except Exception as e:
