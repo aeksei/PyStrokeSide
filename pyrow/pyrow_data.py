@@ -29,8 +29,7 @@ class PyErgRaceData:
     def get_race_data(self):
         return sorted(self.race_data.values(), key=lambda data: data['distance'], reverse=True)
 
-    def get_update_race_data(self, line_number):
-        boat = self.race_data[line_number]
+    def get_leader_board(self, boat):
         is_leader = False
         leader_board = []
         for position, leader in enumerate(self.get_race_data()[:4]):
@@ -49,6 +48,10 @@ class PyErgRaceData:
             leader_board.extend([0] * (24 - length))
 
         return leader_board
+
+    def get_update_race_data(self, line_number):
+        boat = self.race_data[line_number]
+        return self.get_leader_board(boat)
 
     def set_update_race_data(self, line_number, resp):
         distance = round(_bytes2int(resp[7:11]) * 0.1, 1)  # dist * 10
