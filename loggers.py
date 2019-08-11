@@ -2,32 +2,6 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-"""
-dict_loggers = {
-    "version": 1,
-    "formatters": {
-        "simple": '%(asctime)s -- %(name)-12s -- %(levelname)-8s -- %(message)s'
-    },
-
-"handlers":
-    console logging.StreamHandler()
-console.setLevel(logging.INFO)
-console.setFormatter(formatter)
-  console:
-    class: logging.StreamHandler
-    level: DEBUG
-    formatter: simple
-    stream: ext://sys.stdout
-loggers:
-  simpleExample:
-    level: DEBUG
-    handlers: [console]
-    propagate: no
-root:
-  level: DEBUG
-  handlers: [console]
-}
-"""
 
 def logger(name):
     if "LogData" not in os.listdir():

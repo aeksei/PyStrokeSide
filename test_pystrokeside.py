@@ -7,6 +7,7 @@ from pyrow.pyrow_data import PyErgRaceData
 from pyrow.csafe.csafe_cmd import get_start_param
 
 
+
 class MasterSlavePyStrokeSide:
     def __init__(self):
         self.master_erg = PyErgRace(list(pyrow.find())[0])
@@ -238,15 +239,7 @@ if __name__ == '__main__':
     pySS = MasterSlavePyStrokeSide()
     pySS.restore_erg()
     print('restore_erg')
-    #pySS.wait(3)
-
-    """
-    # print('number_all_erg')
-    pySS.number_all_erg()
-    # print('restore_erg')
-    pySS.restore_erg()
-    #sleep(5)
-
+    pySS.wait(3)
     while True:
         line = sys.stdin.readline().rstrip()
         if line:
@@ -257,16 +250,16 @@ if __name__ == '__main__':
     """
     print('set race')
     pySS.set_race()
-    #pySS.wait(5)
+    pySS.wait(5)
 
     print('prepare to race')
     pySS.prepare_to_race()
-    #pySS.wait(10)
+    pySS.wait(10)
 
     pySS.start_race()
 
     pySS.process_race_data()
 
-    #print('close')
-    #pySS.close()
+    print('close')
+    pySS.close()
 

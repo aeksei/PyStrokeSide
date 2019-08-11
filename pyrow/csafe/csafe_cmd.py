@@ -9,6 +9,7 @@ from warnings import warn
 from pyrow.csafe import csafe_dic
 import numpy as np
 import struct as st
+import datetime
 from random import randint
 
 
@@ -85,6 +86,13 @@ def __bytes2ascii(raw_bytes):
         word += chr(letter)
 
     return word
+
+
+def get_time_cmd():
+    now = datetime.datetime.now()  # Get current date and time
+    cmd = [now.hour % 12, now.minute, 0x01, now.month, now.day]
+    cmd.extend(__int2bytes(2, now.year)[::-1])
+    return cmd
 
 #for sending
 def write(arguments):
