@@ -56,32 +56,27 @@ class MasterSlavePyStrokeSide:
         if self.line_number:
             self.master_erg_serial = list(self.line_number.keys())[0]
             if serial != self.master_erg_serial:
-                master_erg_line_number = self.line_number[self.master_erg_serial]
-                self.master_erg_serial = serial
-
+                master_erg_line_number = self.line_number[serial]
                 self.line_number.clear()
                 self.line_number[serial] = master_erg_line_number
                 self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
-                                       'restored from last configuration'.format(self.master_erg_serial))
+                                       'restored from last configuration'.format(serial))
             else:
                 is_restore = True
                 self.PySS_logger.debug('Master erg with serial number {}'
-                                       ' was restored from last configuration'.format(self.master_erg_serial))
-            self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
+                                       ' was restored from last configuration'.format(serial))
         else:
-            self.PySS_logger.debug('Master erg with new serial number {} '.format(self.master_erg_serial))
-            self.master_erg_serial = serial
-            self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
+            self.PySS_logger.debug('Master erg with new serial number {} '.format(serial))
 
+        self.master_erg_serial = serial
+        self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
         self.master_erg.get_erg_num_confirm(0x01, self.master_erg_serial)
         self.setting_erg(0x01, self.master_erg_serial)
-
 
         return is_restore
 
     def restore_slave_erg(self):
         self.PySS_logger.info("Start restore slave ergs")
-        # todo line_number
         for serial, line_number in self.line_number.items():
             if serial != self.master_erg_serial:
                 erg_num = len(self.erg_num) + 1
@@ -98,8 +93,6 @@ class MasterSlavePyStrokeSide:
 
     def restore_line_number(self):
         self.PySS_logger.info("Start restore line numbers")
-        if not self.erg_num:
-            self.erg_num[0x01] = 0x01
         for line_number, erg_num in self.erg_num.items():
             self.master_erg.get_race_lane_check(erg_num)
             self.master_erg.set_race_lane_setup(erg_num, line_number)
@@ -147,18 +140,16 @@ class MasterSlavePyStrokeSide:
                     erg_num = resp[0]
                     serial = resp[1]
 
+                    line_number = len(self.line_number) + 1
+                    self.line_number[serial] = line_number
+
                     if erg_num == 0xFD:
                         erg_num = len(self.erg_num) + 1  # ToDo may be make check min(erg_num)
-                        #line_number = len(self.line_number) + 1
-                        #self.line_number[serial] = line_number  # new erg num for erg lane request
                         self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
-
                         self.master_erg.get_erg_num_confirm(erg_num, serial)
                         self.setting_erg(erg_num, serial)
                         self.master_erg.set_race_operation_type(erg_num, 0x04)
 
-                    line_number = len(self.line_number) + 1
-                    self.line_number[serial] = line_number
                     self.erg_num[line_number] = erg_num
 
                     self.master_erg.set_race_lane_setup(erg_num, line_number)
@@ -167,7 +158,6 @@ class MasterSlavePyStrokeSide:
         except KeyboardInterrupt:
             # press "Done numbering"
             self.config['line_number'] = self.line_number
-            #self.config['race_line'] = self.erg_num
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
