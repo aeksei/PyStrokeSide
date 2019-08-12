@@ -20,9 +20,9 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger = logging.getLogger("PySS")
 
         self.master_erg_serial = None
-        self.line_number = self.config['line_number']
+        self.line_number = {}
         self.erg_num = {}
-        self.missing_ergs = []  # may be use for setting erg
+        self.missing_ergs = {}  # may be use for setting erg
 
         self.race_name = self.config['race_name']
         self.race_participant = self.config['race_participant']
@@ -35,6 +35,10 @@ class MasterSlavePyStrokeSide:
         for i in range(3):
             self.master_erg.reset_erg_num()
             self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
+
+        self.line_number.clear()
+        self.erg_num.clear()
+        self.missing_ergs.clear()
 
     def setting_erg(self, destination, serial):
         self.PySS_logger.info("Setting erg {:02X} with serial number {}".format(destination, serial))
@@ -57,7 +61,11 @@ class MasterSlavePyStrokeSide:
             self.master_erg_serial = list(self.line_number.keys())[0]
             if serial != self.master_erg_serial:
                 master_erg_line_number = self.line_number[serial]
+
+                self.line_number.pop(serial)
+                self.missing_ergs = self.line_number
                 self.line_number.clear()
+
                 self.line_number[serial] = master_erg_line_number
                 self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
                                        'restored from last configuration'.format(serial))
@@ -86,10 +94,13 @@ class MasterSlavePyStrokeSide:
                 if is_restore:
                     self.PySS_logger.debug('Erg {} with serial number {}'
                                            ' was restored from last configuration'.format(erg_num, serial))
+                    self.missing_erg[serial] = line_number
                 else:
                     self.PySS_logger.debug('Erg {} with serial number {} wasn\'t '
                                            'restored from last configuration'.format(erg_num, serial))
                 self.setting_erg(erg_num, serial)
+
+        return self.missing_ergs
 
     def restore_line_number(self):
         self.PySS_logger.info("Start restore line numbers")
@@ -103,10 +114,16 @@ class MasterSlavePyStrokeSide:
     def restore_erg(self):
         self.PySS_logger.info("Start restore ergs")
         self.reset_all_erg()
+        self.line_number = self.config['line_number']
 
         is_restore = self.restore_master_erg()
         if is_restore:
             self.restore_slave_erg()
+
+        if self.missing_ergs:
+            for serial, line_number in self.missing_ergs:
+                self.PySS_logger.debug('Missing erg with serial num {} '
+                                       'on line number {} from last configuration'.format(serial, line_number))
 
         self.master_erg.set_race_operation_type(0x01, 0x04)
         self.master_erg.set_race_starting_physical_address(0x01)
@@ -121,8 +138,6 @@ class MasterSlavePyStrokeSide:
 
     def number_all_erg(self):
         self.PySS_logger.info("Start number all ergs")
-        self.line_number.clear()
-        self.erg_num.clear()
         self.reset_all_erg()
 
         self.master_erg.set_race_starting_physical_address(0x01)
