@@ -23,7 +23,7 @@ class Config:
         return self.data[item]
 
     def create(self):
-        self['serial_num'] = {}
+        self['line_number'] = {}
 
         self['race_name'] = "test_race"
         self['race_participant'] = {0x01: "Lane_1",

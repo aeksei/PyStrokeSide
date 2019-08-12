@@ -19,8 +19,8 @@ class MasterSlavePyStrokeSide:
             logging.config.dictConfig(json.load(f))
         self.PySS_logger = logging.getLogger("PySS")
 
-        self.master_erg = None
-        self.line_number = self.config['serial_num']
+        self.master_erg_serial = None
+        self.line_number = self.config['line_number']
         self.erg_num = {}
         self.missing_ergs = []  # may be use for setting erg
 
@@ -52,32 +52,30 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger.info("Start restore master erg")
         is_restore = False
         serial = self.master_erg.get_serial_num(0x01)
+
         if self.line_number:
-            is_restore = self.master_erg.get_erg_num_confirm(0x01, serial)
-            if is_restore:
-                self.PySS_logger.debug('Master erg with serial number {}'
-                                       ' was restored from last configuration'.format(serial))
-            else:
+            self.master_erg_serial = list(self.line_number.keys())[0]
+            if serial != self.master_erg_serial:
+                master_erg_line_number = self.line_number[self.master_erg_serial]
+                self.master_erg_serial = serial
+
+                self.line_number.clear()
+                self.line_number[serial] = master_erg_line_number
                 self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
-                                       'restored from last configuration'.format(serial))
-            self.erg_num.clear()
-            self.erg_num[len(self.erg_num) + 1] = self.line_number[serial]
-            self.line_number.clear()
+                                       'restored from last configuration'.format(self.master_erg_serial))
+            else:
+                is_restore = True
+                self.PySS_logger.debug('Master erg with serial number {}'
+                                       ' was restored from last configuration'.format(self.master_erg_serial))
+            self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
+        else:
+            self.PySS_logger.debug('Master erg with new serial number {} '.format(self.master_erg_serial))
+            self.master_erg_serial = serial
+            self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
 
-        """
-        if not self.serial_num:
-            self.serial_num[serial] = [0x01, 0x01]
-            self.PySS_logger.debug('Master erg set {:02X} erg_num and {:02X} line_number'.format(0x01, 0x01))
-        elif serial != last_master_erg:  # change cable on master_erg
-            self.PySS_logger.debug('Master erg was changed after last configuration')
-            master_erg = [0x01, self.serial_num[serial][1]]
-            self.serial_num.clear()
-            self.line_number.clear()
-            self.serial_num[serial] = master_erg
-        """
+        self.master_erg.get_erg_num_confirm(0x01, self.master_erg_serial)
+        self.setting_erg(0x01, self.master_erg_serial)
 
-        self.setting_erg(0x01, serial)
-        self.master_erg = serial
 
         return is_restore
 
@@ -85,7 +83,7 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger.info("Start restore slave ergs")
         # todo line_number
         for serial, line_number in self.line_number.items():
-            if serial != self.master_erg:
+            if serial != self.master_erg_serial:
                 erg_num = len(self.erg_num) + 1
                 self.erg_num[line_number] = erg_num
                 self.master_erg.set_erg_num(erg_num, serial)
@@ -113,8 +111,9 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger.info("Start restore ergs")
         self.reset_all_erg()
 
-        self.restore_master_erg()
-        self.restore_slave_erg()
+        is_restore = self.restore_master_erg()
+        if is_restore:
+            self.restore_slave_erg()
 
         self.master_erg.set_race_operation_type(0x01, 0x04)
         self.master_erg.set_race_starting_physical_address(0x01)
@@ -149,22 +148,26 @@ class MasterSlavePyStrokeSide:
                     serial = resp[1]
 
                     if erg_num == 0xFD:
-                        erg_num = len(self.line_number) + 1  # ToDo may be make check min(erg_num)
-                        self.line_number[erg_num] = serial  # new erg num for erg lane request
+                        erg_num = len(self.erg_num) + 1  # ToDo may be make check min(erg_num)
+                        #line_number = len(self.line_number) + 1
+                        #self.line_number[serial] = line_number  # new erg num for erg lane request
                         self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
 
                         self.master_erg.get_erg_num_confirm(erg_num, serial)
                         self.setting_erg(erg_num, serial)
                         self.master_erg.set_race_operation_type(erg_num, 0x04)
 
-                    self.erg_num[erg_num] = len(self.erg_num) + 1
-                    self.master_erg.set_race_lane_setup(erg_num, self.erg_num[erg_num])
+                    line_number = len(self.line_number) + 1
+                    self.line_number[serial] = line_number
+                    self.erg_num[line_number] = erg_num
+
+                    self.master_erg.set_race_lane_setup(erg_num, line_number)
                     self.master_erg.set_screen_state(erg_num, 0x02)
-                    self.master_erg.get_race_lane_request(erg_num, self.erg_num[erg_num])
+                    self.master_erg.get_race_lane_request(erg_num, line_number)
         except KeyboardInterrupt:
             # press "Done numbering"
-            self.config['serial_num'] = self.line_number
-            self.config['race_line'] = self.erg_num
+            self.config['line_number'] = self.line_number
+            #self.config['race_line'] = self.erg_num
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
@@ -294,9 +297,9 @@ if __name__ == '__main__':
     pySS.wait(3)
 
     pySS.number_all_erg()
-
     pySS.restore_erg()
 
+    """
     pySS.set_race()
     pySS.wait(5)
 
@@ -306,7 +309,8 @@ if __name__ == '__main__':
     pySS.start_race()
 
     pySS.process_race_data()
-
+    """
+    pySS.wait(3)
     pySS.close()
 
     """
