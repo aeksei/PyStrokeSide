@@ -20,8 +20,8 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger = logging.getLogger("PySS")
 
         self.master_erg = None
-        self.serial_num = self.config['serial_num']
-        self.line_number = self.config['line_number']
+        self.line_number = self.config['serial_num']
+        self.erg_num = {}
         self.missing_ergs = []  # may be use for setting erg
 
         self.race_name = self.config['race_name']
@@ -49,19 +49,20 @@ class MasterSlavePyStrokeSide:
         self.master_erg.get_cpu_tick_rate(destination)
 
     def restore_master_erg(self):
+        self.PySS_logger.info("Start restore master erg")
+        is_restore = False
         serial = self.master_erg.get_serial_num(0x01)
-
-        if self.serial_num:
-            is_confirm = self.master_erg.get_erg_num_confirm(0x01, serial)
-            if is_confirm:
+        if self.line_number:
+            is_restore = self.master_erg.get_erg_num_confirm(0x01, serial)
+            if is_restore:
                 self.PySS_logger.debug('Master erg with serial number {}'
                                        ' was restored from last configuration'.format(serial))
             else:
                 self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
                                        'restored from last configuration'.format(serial))
-                self.line_number.clear()
-                self.line_number[len(self.line_number) + 1] = self.serial_num[serial]
-                self.serial_num.clear()
+            self.erg_num.clear()
+            self.erg_num[len(self.erg_num) + 1] = self.line_number[serial]
+            self.line_number.clear()
 
         """
         if not self.serial_num:
@@ -78,30 +79,40 @@ class MasterSlavePyStrokeSide:
         self.setting_erg(0x01, serial)
         self.master_erg = serial
 
+        return is_restore
+
     def restore_slave_erg(self):
         self.PySS_logger.info("Start restore slave ergs")
         # todo line_number
-        for serial in self.serial_num:
+        for serial, line_number in self.line_number.items():
             if serial != self.master_erg:
-                self.master_erg.set_erg_num(erg_num[0], serial)
-                self.master_erg.get_erg_num_confirm(erg_num[0], serial)  # TODO check confirm and miss erg
-                self.setting_erg(erg_num[0], serial)
+                erg_num = len(self.erg_num) + 1
+                self.erg_num[line_number] = erg_num
+                self.master_erg.set_erg_num(erg_num, serial)
+                is_restore = self.master_erg.get_erg_num_confirm(erg_num, serial)  # TODO check confirm and miss erg
+                if is_restore:
+                    self.PySS_logger.debug('Erg {} with serial number {}'
+                                           ' was restored from last configuration'.format(erg_num, serial))
+                else:
+                    self.PySS_logger.debug('Erg {} with serial number {} wasn\'t '
+                                           'restored from last configuration'.format(erg_num, serial))
+                self.setting_erg(erg_num, serial)
 
     def restore_line_number(self):
         self.PySS_logger.info("Start restore line numbers")
-        if not self.line_number:
-            self.line_number[0x01] = 0x01
-        for erg_num, race_line in self.line_number.items():
+        if not self.erg_num:
+            self.erg_num[0x01] = 0x01
+        for line_number, erg_num in self.erg_num.items():
             self.master_erg.get_race_lane_check(erg_num)
-            self.master_erg.set_race_lane_setup(erg_num, race_line)
-            self.master_erg.get_race_lane_request(erg_num, race_line)
+            self.master_erg.set_race_lane_setup(erg_num, line_number)
+            self.master_erg.get_race_lane_request(erg_num, line_number)
 
         self.master_erg.set_screen_state(0xFF, 0x0e)
 
     def restore_erg(self):
         self.PySS_logger.info("Start restore ergs")
         self.reset_all_erg()
-        
+
         self.restore_master_erg()
         self.restore_slave_erg()
 
@@ -118,8 +129,8 @@ class MasterSlavePyStrokeSide:
 
     def number_all_erg(self):
         self.PySS_logger.info("Start number all ergs")
-        self.serial_num.clear()
         self.line_number.clear()
+        self.erg_num.clear()
         self.reset_all_erg()
 
         self.master_erg.set_race_starting_physical_address(0x01)
@@ -138,95 +149,95 @@ class MasterSlavePyStrokeSide:
                     serial = resp[1]
 
                     if erg_num == 0xFD:
-                        erg_num = len(self.serial_num) + 1  # ToDo may be make check min(erg_num)
-                        self.serial_num[erg_num] = serial  # new erg num for erg lane request
+                        erg_num = len(self.line_number) + 1  # ToDo may be make check min(erg_num)
+                        self.line_number[erg_num] = serial  # new erg num for erg lane request
                         self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
 
                         self.master_erg.get_erg_num_confirm(erg_num, serial)
                         self.setting_erg(erg_num, serial)
                         self.master_erg.set_race_operation_type(erg_num, 0x04)
 
-                    self.line_number[erg_num] = len(self.line_number) + 1
-                    self.master_erg.set_race_lane_setup(erg_num, self.line_number[erg_num])
+                    self.erg_num[erg_num] = len(self.erg_num) + 1
+                    self.master_erg.set_race_lane_setup(erg_num, self.erg_num[erg_num])
                     self.master_erg.set_screen_state(erg_num, 0x02)
-                    self.master_erg.get_race_lane_request(erg_num, self.line_number[erg_num])
+                    self.master_erg.get_race_lane_request(erg_num, self.erg_num[erg_num])
         except KeyboardInterrupt:
             # press "Done numbering"
-            self.config['serial_num'] = self.serial_num
-            self.config['race_line'] = self.line_number
+            self.config['serial_num'] = self.line_number
+            self.config['race_line'] = self.erg_num
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_participant(erg_num, 0x00, self.race_name)
 
     def set_participant_name(self):
         self.PySS_logger.info("Start set participant name")
         # TODO by participant name
-        for erg_num, erg_line in self.line_number.items():
+        for erg_num, erg_line in self.erg_num.items():
             self.master_erg.set_race_participant(0xFF, erg_line, self.race_participant[erg_num])
 
         self.PySS_logger.info("Start check participant name for each erg")
-        for check_erg_num in self.line_number:
+        for check_erg_num in self.erg_num:
             count_participant = self.master_erg.get_race_participant_count(check_erg_num)
             if count_participant != len(self.race_participant):
-                for erg_num, erg_line in self.line_number.items():
+                for erg_num, erg_line in self.erg_num.items():
                     self.master_erg.set_race_participant(check_erg_num, erg_line, self.race_participant[erg_num])
 
     def set_race(self):
         self.PySS_logger.info("Start set race")
         # TODO by participant name
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_screen_state(erg_num, 0x08)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
 
         self.set_race_name()
         self.set_participant_name()
 
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_screen_state(erg_num, 0x27)
         # TODO CSAFE_SETCALORIES_CMD
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_screen_state(erg_num, 0x1f)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_workout_type(erg_num, 0x00)
             self.master_erg.set_screen_state(erg_num, 0x03)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x0C)
 
     def prepare_to_race(self):
         self.PySS_logger.info("Prepare to race")
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, [0x06, 0x9d, 0x83])
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_cpu_tick_rate(erg_num, 0x02)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x07)
         self.master_erg.foo(0xff)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.latch_tick_time(erg_num)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_all_race_params(erg_num, self.distance)
             self.master_erg.configure_workout(erg_num)
             self.master_erg.set_screen_state(erg_num, 0x04)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
-        self.erg_race.set_config_race(len(self.line_number), self.team_size, self.distance)
+        self.erg_race.set_config_race(len(self.erg_num), self.team_size, self.distance)
 
     def start_race(self):
         self.PySS_logger.info("Start race")
         # latch_time = self.master_erg.get_latched_tick_time(0x01)  # as in erg_race
         # TODO check_flywheels_moving
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.get_erg_info(erg_num)
 
         latch_time = self.master_erg.get_latched_tick_time(0x01)
         params = get_start_param(latch_time)
-        for erg_num in self.line_number:
+        for erg_num in self.erg_num:
             self.master_erg.set_race_start_params(erg_num, params)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
@@ -236,7 +247,7 @@ class MasterSlavePyStrokeSide:
         self.PySS_logger.info("Race data from ergs")
         try:
             while True:
-                for erg_num, line_number in self.line_number.items():
+                for erg_num, line_number in self.erg_num.items():
                     cmd_data = self.erg_race.get_update_race_data(line_number)
                     resp = self.master_erg.update_race_data(erg_num, cmd_data)
                     self.erg_race.set_update_race_data(line_number, resp)
@@ -264,13 +275,13 @@ class MasterSlavePyStrokeSide:
     def wait(self, time=0):
         if time:
             for _ in range(time):
-                for erg_num in self.line_number:
+                for erg_num in self.erg_num:
                     self.master_erg.get_erg_info(erg_num)
                 sleep(1)
         else:
             try:
                 while True:
-                    for erg_num in self.line_number:
+                    for erg_num in self.erg_num:
                         self.master_erg.get_erg_info(erg_num)
                     sleep(1)
             except KeyboardInterrupt:
