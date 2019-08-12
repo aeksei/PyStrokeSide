@@ -24,7 +24,6 @@ class Config:
 
     def create(self):
         self['serial_num'] = {}
-        self['line_number'] = {}
 
         self['race_name'] = "test_race"
         self['race_participant'] = {0x01: "Lane_1",
@@ -38,8 +37,6 @@ class Config:
     def restore(self):
         with open(self.filename, "r") as read_file:
             self.data = json.load(read_file, object_hook=self.keystoint)
-
-        self['line_number'] = {v[0]: v[1] for v in self['serial_num'].values()}
 
     def keystoint(self, d):
         return {int(k) if k.lstrip('-').isdigit() else k: v for k, v in d.items()}

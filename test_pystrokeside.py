@@ -36,6 +36,19 @@ class MasterSlavePyStrokeSide:
             self.master_erg.reset_erg_num()
             self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
 
+    def setting_erg(self, destination, serial):
+        self.PySS_logger.info("Setting erg {:02X} with serial number {}".format(destination, serial))
+        self.master_erg.VRPM3Race_100012D0(destination)
+        self.master_erg.call_10001210(destination)
+        self.master_erg.call_10001400(destination, serial)
+        self.master_erg.set_datetime(destination)
+        self.master_erg.set_race_idle_params(destination)  # TODO check param
+
+        self.master_erg.set_screen_error_mode(destination)
+        self.master_erg.set_cpu_tick_rate(destination, 0x01)
+        self.master_erg.get_cpu_tick_rate(destination)
+
+    def restore_master_erg(self):
         serial = self.master_erg.get_serial_num(0x01)
 
         if self.serial_num:
@@ -47,7 +60,7 @@ class MasterSlavePyStrokeSide:
                 self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
                                        'restored from last configuration'.format(serial))
                 self.line_number.clear()
-                self.line_number[len(self.line_number) + 1] = self.serial_num[serial][1]
+                self.line_number[len(self.line_number) + 1] = self.serial_num[serial]
                 self.serial_num.clear()
 
         """
@@ -64,18 +77,6 @@ class MasterSlavePyStrokeSide:
 
         self.setting_erg(0x01, serial)
         self.master_erg = serial
-
-    def setting_erg(self, destination, serial):
-        self.PySS_logger.info("Setting erg {:02X} with serial number {}".format(destination, serial))
-        self.master_erg.VRPM3Race_100012D0(destination)
-        self.master_erg.call_10001210(destination)
-        self.master_erg.call_10001400(destination, serial)
-        self.master_erg.set_datetime(destination)
-        self.master_erg.set_race_idle_params(destination)  # TODO check param
-
-        self.master_erg.set_screen_error_mode(destination)
-        self.master_erg.set_cpu_tick_rate(destination, 0x01)
-        self.master_erg.get_cpu_tick_rate(destination)
 
     def restore_slave_erg(self):
         self.PySS_logger.info("Start restore slave ergs")
@@ -100,6 +101,8 @@ class MasterSlavePyStrokeSide:
     def restore_erg(self):
         self.PySS_logger.info("Start restore ergs")
         self.reset_all_erg()
+        
+        self.restore_master_erg()
         self.restore_slave_erg()
 
         self.master_erg.set_race_operation_type(0x01, 0x04)
@@ -109,8 +112,8 @@ class MasterSlavePyStrokeSide:
         self.master_erg.set_race_operation_type(0xFF, 0x04)
 
         self.master_erg.set_screen_state(0xFF, 0x07)
-        self.restore_line_number()
 
+        self.restore_line_number()
         self.master_erg.set_screen_state(0xFF, 0x0E)
 
     def number_all_erg(self):
