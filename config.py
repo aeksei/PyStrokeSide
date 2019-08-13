@@ -24,6 +24,7 @@ class Config:
 
     def create(self):
         self['line_number'] = {}
+        self['master_erg_serial'] = 430343302
 
         self['race_name'] = "test_race"
         self['race_participant'] = {0x01: "Lane_1",
