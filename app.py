@@ -15,7 +15,7 @@ class ExampleApp(QtWidgets.QMainWindow, PyStrokeSideGUI.Ui_MainWindow):
 
         self.PySS = MasterSlavePyStrokeSide()
 
-        self.btn_number_all_ergs.clicked.connect(self.PySS.number_all_erg())
+        self.btn_number_all_ergs.clicked.connect(self.PySS.number_all_erg)
 
 
 def main():

@@ -11,13 +11,13 @@ from pyrow.csafe.csafe_cmd import get_start_param
 
 class MasterSlavePyStrokeSide:
     def __init__(self):
-        self.master_erg = PyErgRace(list(pyrow.find())[0])
-        self.erg_race = PyErgRaceData()
-        self.config = Config()
-
         with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.PySS_logger = logging.getLogger("PySS")
+
+        self.master_erg = self.discovering_erg()
+        self.erg_race = PyErgRaceData()
+        self.config = Config()
 
         self.master_erg_serial = self.config['master_erg_serial']
         self.line_number = {}
@@ -29,6 +29,13 @@ class MasterSlavePyStrokeSide:
 
         self.distance = 1000
         self.team_size = 1
+
+    def discovering_erg(self):
+        try:
+            return PyErgRace(list(pyrow.find())[0])
+        except ValueError:
+            self.PySS_logger.critical("Ergs not found")
+            return None
 
     def reset_all_erg(self):  # reset all
         self.PySS_logger.info("Start reset all ergs")
@@ -319,7 +326,7 @@ if __name__ == '__main__':
         line = sys.stdin.readline().rstrip()
         if line:
             sys.stdout.write('receive' + '\n')
-            #sys.stdout.write(line)
+            sys.stdout.write(line)
         else:
             sys.stdout.flush()
             sleep(1)
