@@ -162,7 +162,7 @@ class PyErg(object):
         Configures usb connection and sets erg value
         """
         from warnings import warn
-        with open("logging.conf", "r") as f:
+        with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.pyrow_logger = logging.getLogger("pyrow")
 

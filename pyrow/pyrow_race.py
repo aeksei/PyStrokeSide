@@ -19,7 +19,7 @@ class PyErgRace(pyrow.PyErg):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        with open("logging.conf", "r") as f:
+        with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.pyrow_race_logger = logging.getLogger("pyrow_race")
 

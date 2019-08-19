@@ -15,7 +15,7 @@ class MasterSlavePyStrokeSide:
         self.erg_race = PyErgRaceData()
         self.config = Config()
 
-        with open("logging.conf", "r") as f:
+        with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.PySS_logger = logging.getLogger("PySS")
 
