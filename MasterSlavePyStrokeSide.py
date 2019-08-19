@@ -162,7 +162,7 @@ class MasterSlavePyStrokeSide:
         try:
             erg_num_offset = 2
             while True:  # ToDo may me make missing_erg function
-                resp = pySS.master_erg.get_race_lane_request()
+                resp = self.master_erg.get_race_lane_request()
                 if resp:
                     erg_num = resp[0]
                     serial = resp[1]
@@ -267,7 +267,7 @@ class MasterSlavePyStrokeSide:
             self.master_erg.set_race_start_params(erg_num, params)
             self.master_erg.set_race_operation_type(erg_num, 0x09)
 
-        pySS.wait(3)  # TODO check false start
+        self.wait(3)  # TODO check false start
 
     def process_race_data(self):
         self.PySS_logger.info("Race data from ergs")
@@ -315,13 +315,22 @@ class MasterSlavePyStrokeSide:
 
 
 if __name__ == '__main__':
+    while True:
+        line = sys.stdin.readline().rstrip()
+        if line:
+            sys.stdout.write('receive' + '\n')
+            #sys.stdout.write(line)
+        else:
+            sys.stdout.flush()
+            sleep(1)
+    """        
     pySS = MasterSlavePyStrokeSide()
     pySS.restore_erg()
     pySS.wait(5)
 
     pySS.number_all_erg()
     pySS.restore_erg()
-
+    """
     """
     pySS.set_race()
     pySS.wait(5)
@@ -332,17 +341,10 @@ if __name__ == '__main__':
     pySS.start_race()
 
     pySS.process_race_data()
-    """
+
     pySS.wait(5)
     pySS.close()
+    """
 
-    """
-    while True:
-        line = sys.stdin.readline().rstrip()
-        if line:
-            sys.stdout.write(line + '\n')
-        else:
-            sys.stdout.flush()
-            sleep(1)
-    """
+
 
