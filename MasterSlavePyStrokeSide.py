@@ -19,6 +19,8 @@ class MasterSlavePyStrokeSide:
         self.erg_race = PyErgRaceData()
         self.config = Config()
 
+        self.erg_num_offset = 2
+
         self.master_erg_serial = self.config['master_erg_serial']
         self.line_number = {}
         self.erg_num = {}
@@ -150,49 +152,50 @@ class MasterSlavePyStrokeSide:
         self.restore_line_number()
         self.master_erg.set_screen_state(0xFF, 0x0E)
 
+    def request_new_line_number(self):
+        resp = self.master_erg.get_race_lane_request()
+        if resp:
+            erg_num = resp[0]
+            serial = resp[1]
+
+            if erg_num == 0xFD:
+                erg_num = len(self.erg_num) + self.erg_num_offset  # ToDo may be make check min(erg_num)
+                self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
+                self.master_erg.get_erg_num_confirm(erg_num, serial)
+                self.setting_erg(erg_num, serial)
+                self.master_erg.set_race_operation_type(erg_num, 0x04)
+            else:
+                self.erg_num_offset = 1
+
+            line_number = len(self.line_number) + 1
+            self.line_number[serial] = line_number
+            self.erg_num[line_number] = erg_num
+
+            self.master_erg.set_race_lane_setup(erg_num, line_number)
+            self.master_erg.set_screen_state(erg_num, 0x02)
+            self.master_erg.get_race_lane_request(erg_num, line_number)
+
+            self.PySS_logger.debug('Line number: {}'.format(self.line_number))
+            self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+
     def number_all_erg(self):
         self.PySS_logger.info("Start number all ergs")
         self.line_number.clear()
         self.erg_num.clear()
         self.missing_ergs.clear()
+        self.erg_num_offset = 2
 
         self.reset_all_erg()
 
         self.master_erg.set_race_starting_physical_address(0x01)
         self.master_erg.set_race_operation_type(0x01, 0x04)
-
         self.master_erg.set_race_starting_physical_address(0xFF)
         self.master_erg.set_race_operation_type(0xFF, 0x04)
-
         self.master_erg.set_screen_state(0xFF, 0x01)
 
         try:
-            erg_num_offset = 2
             while True:  # ToDo may me make missing_erg function
-                resp = self.master_erg.get_race_lane_request()
-                if resp:
-                    erg_num = resp[0]
-                    serial = resp[1]
-
-                    if erg_num == 0xFD:
-                        erg_num = len(self.erg_num) + erg_num_offset  # ToDo may be make check min(erg_num)
-                        self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
-                        self.master_erg.get_erg_num_confirm(erg_num, serial)
-                        self.setting_erg(erg_num, serial)
-                        self.master_erg.set_race_operation_type(erg_num, 0x04)
-                    else:
-                        erg_num_offset = 1
-
-                    line_number = len(self.line_number) + 1
-                    self.line_number[serial] = line_number
-                    self.erg_num[line_number] = erg_num
-
-                    self.master_erg.set_race_lane_setup(erg_num, line_number)
-                    self.master_erg.set_screen_state(erg_num, 0x02)
-                    self.master_erg.get_race_lane_request(erg_num, line_number)
-
-                    self.PySS_logger.debug('Line number: {}'.format(self.line_number))
-                    self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+                self.request_new_line_number()
 
         except KeyboardInterrupt:
             # press "Done numbering"
@@ -326,7 +329,9 @@ if __name__ == '__main__':
     ergs = pySS.discovering_erg()
     if ergs:
         pySS.master_erg = ergs[0]
-        # handler
+        pySS.restore_erg()
+        pySS.wait(5)
+
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -335,21 +340,29 @@ if __name__ == '__main__':
             cmd = json.loads(line[:-1])
             pySS.PySS_logger.info("receive {}".format(cmd))
 
-        sys.stdin.flush()
-    """
-    for line in sys.stdin.readline():
-        pySS.PySS_logger.critical(line)
-        sys.stdout.write(line)
-        sys.stdout.flush()
-    """
-    """        
-    pySS = MasterSlavePyStrokeSide()
-    pySS.restore_erg()
-    pySS.wait(5)
+        if 'erg_numeration' in cmd:
+            if 'number_all_ergs' in cmd['erg_numeration']:
+                pySS.number_all_erg()
 
-    pySS.number_all_erg()
-    pySS.restore_erg()
-    """
+                while True:
+                    line = sys.stdin.readline()
+                    if not line:
+                        break
+                    else:
+                        cmd = json.loads(line[:-1])
+                        pySS.PySS_logger.info("receive {}".format(cmd))
+
+                    if 'number_erg_done' in cmd['erg_numeration']:
+                        break
+                    else:
+                        pySS.request_new_line_number()
+
+                pySS.restore_erg()
+            elif 'number_missing_ergs' in cmd['erg_numeration']:
+                pass
+
+        sys.stdin.flush()
+
     """
     pySS.set_race()
     pySS.wait(5)
