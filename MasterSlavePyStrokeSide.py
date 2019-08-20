@@ -15,7 +15,7 @@ class MasterSlavePyStrokeSide:
             logging.config.dictConfig(json.load(f))
         self.PySS_logger = logging.getLogger("PySS")
 
-        self.master_erg = self.discovering_erg()
+        self.master_erg = None
         self.erg_race = PyErgRaceData()
         self.config = Config()
 
@@ -32,10 +32,10 @@ class MasterSlavePyStrokeSide:
 
     def discovering_erg(self):
         try:
-            return PyErgRace(list(pyrow.find())[0])
+            return PyErgRace(list(pyrow.find()))
         except ValueError:
             self.PySS_logger.critical("Ergs not found")
-            return None
+            return []
 
     def reset_all_erg(self):  # reset all
         self.PySS_logger.info("Start reset all ergs")
@@ -322,14 +322,26 @@ class MasterSlavePyStrokeSide:
 
 
 if __name__ == '__main__':
+    pySS = MasterSlavePyStrokeSide()
+    ergs = pySS.discovering_erg()
+    if ergs:
+        pySS.master_erg = ergs[0]
+        # handler
     while True:
-        line = sys.stdin.readline().rstrip()
-        if line:
-            sys.stdout.write('receive' + '\n')
-            sys.stdout.write(line)
+        line = sys.stdin.readline()
+        if not line:
+            break
         else:
-            sys.stdout.flush()
-            sleep(1)
+            cmd = json.loads(line[:-1])
+            pySS.PySS_logger.info("receive {}".format(cmd))
+
+        sys.stdin.flush()
+    """
+    for line in sys.stdin.readline():
+        pySS.PySS_logger.critical(line)
+        sys.stdout.write(line)
+        sys.stdout.flush()
+    """
     """        
     pySS = MasterSlavePyStrokeSide()
     pySS.restore_erg()
