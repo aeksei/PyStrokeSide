@@ -1,293 +1,391 @@
-import os
-import time
+import sys
 import json
-import socketio
-from datetime import datetime
-from usbpcapcmd import USBPcapCMD
-
-from pyrow.csafe.csafe_cmd import __bytes2ascii, __bytes2int, cmd2hex
-from loggers import logger, race_logger, raw_logger
-from test.parser import parse_raw_cmd
-
-_bytes2int = __bytes2int
-_int2bytes = cmd2hex
-_bytes2ascii = __bytes2ascii
+import logging.config
+from time import sleep
+from pyrow import pyrow
+from config import Config
+from pyrow.pyrow_race import PyErgRace
+from pyrow.pyrow_data import PyErgRaceData
+from pyrow.csafe.csafe_cmd import get_start_param
 
 
 class PyStrokeSide:
     def __init__(self):
-        self.HOME_DIR = os.getcwd()
-        self.race_file = None
+        with open("logging.json", "r") as f:
+            logging.config.dictConfig(json.load(f))
+        self.PySS_logger = logging.getLogger("PySS")
 
-        self.race_name = None
-        self.erg_line = {}
-        self.participant_name = {}
-        self.total_distance = None
-        self.race_data = {}
-        self.race_team = 1
-        self.team_data = {}
-        self.finish_time = {}
+        self.master_erg = None
+        self.erg_race = PyErgRaceData()
+        self.config = Config()
 
-        self.address = None
-        self.token = None
-        self.timeout = 0
+        self.erg_num_offset = 2
 
-        self.logger = logger('PyStrokeSide')
-        #self.config = Config()
-        #self.restore_config()
+        self.master_erg_serial = self.config['master_erg_serial']
+        self.line_number = {}
+        self.erg_num = {}
+        self.missing_ergs = {}  # may be use for setting erg
 
-        self.race_logger = None
-        self.new_race_logger()
-        self.raw_logger = raw_logger()
-        self.raw_logger.setLevel("INFO")
+        self.race_name = self.config['race_name']
+        self.race_participant = self.config['race_participant']
 
-        self.usbpcapcmd = None
+        self.distance = 1000
+        self.team_size = 1
+
+    def discovering_erg(self):
+        try:
+            return PyErgRace(list(pyrow.find()))
+        except ValueError:
+            self.PySS_logger.critical("Ergs not found")
+            return []
+
+    def reset_all_erg(self):  # reset all
+        self.PySS_logger.info("Start reset all ergs")
+        for i in range(3):
+            self.master_erg.reset_erg_num()
+            self.master_erg.set_erg_num(0x01, self.master_erg.get_serial_num(0xFD))
+
+    def setting_erg(self, destination, serial):
+        self.PySS_logger.info("Setting erg {:02X} with serial number {}".format(destination, serial))
+        self.master_erg.VRPM3Race_100012D0(destination)
+        self.master_erg.call_10001210(destination)
+        self.master_erg.call_10001400(destination, serial)
+        self.master_erg.set_datetime(destination)
+        self.master_erg.set_race_idle_params(destination)  # TODO check param
+
+        self.master_erg.set_screen_error_mode(destination)
+        self.master_erg.set_cpu_tick_rate(destination, 0x01)
+        self.master_erg.get_cpu_tick_rate(destination)
+
+    def restore_master_erg(self):
+        self.PySS_logger.info("Start restore master erg")
+        is_restore = False
+        serial = self.master_erg.get_serial_num(0x01)
+
+        if serial in self.line_number:
+            if serial == self.master_erg_serial:
+                is_restore = True
+                self.PySS_logger.debug('Master erg with serial number {}'
+                                       ' was restored from last configuration'.format(self.master_erg_serial))
+            else:
+                self.PySS_logger.debug('Master erg with serial number {} wasn\'t '
+                                       'restored from last configuration'.format(self.master_erg_serial))
+
+                line = self.line_number.pop(serial)
+                self.missing_ergs = self.line_number.copy()
+                self.line_number.clear()
+                self.line_number[serial] = line
+
+        else:
+            self.PySS_logger.debug('Master erg with new serial number {} '.format(serial))
+            self.line_number[serial] = 0x01
+
+        self.master_erg_serial = serial
+        self.config['master_erg_serial'] = self.master_erg_serial
+        self.erg_num.clear()
+        self.erg_num[self.line_number[self.master_erg_serial]] = 0x01
+        self.master_erg.get_erg_num_confirm(0x01, self.master_erg_serial)
+        self.setting_erg(0x01, self.master_erg_serial)
+
+        self.PySS_logger.debug('Line number: {}'.format(self.line_number))
+        self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+
+        return is_restore
+
+    def restore_slave_erg(self):
+        self.PySS_logger.info("Start restore slave ergs")
+        for serial, line_number in self.line_number.items():
+            if serial != self.master_erg_serial:
+                erg_num = len(self.erg_num) + 1
+                self.erg_num[line_number] = erg_num
+                self.master_erg.set_erg_num(erg_num, serial)
+                is_restore = self.master_erg.get_erg_num_confirm(erg_num, serial)  # TODO check confirm and miss erg
+                if is_restore:
+                    self.PySS_logger.debug('Erg {} with serial number {}'
+                                           ' was restored from last configuration'.format(erg_num, serial))
+                else:
+                    self.missing_ergs[serial] = line_number
+                    self.PySS_logger.debug('Erg {} with serial number {} wasn\'t '
+                                           'restored from last configuration'.format(erg_num, serial))
+                self.setting_erg(erg_num, serial)
+
+        self.PySS_logger.debug('Line number: {}'.format(self.line_number))
+        self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+
+        return self.missing_ergs
+
+    def restore_line_number(self):
+        self.PySS_logger.info("Start restore line numbers")
+        for line_number, erg_num in self.erg_num.items():
+            self.master_erg.get_race_lane_check(erg_num)
+            self.master_erg.set_race_lane_setup(erg_num, line_number)
+            self.master_erg.get_race_lane_request(erg_num, line_number)
+
+        self.master_erg.set_screen_state(0xFF, 0x0e)
+
+    def restore_erg(self):
+        self.PySS_logger.info("Start restore ergs")
+        self.reset_all_erg()
+        self.missing_ergs.clear()
+
+        self.line_number = self.config['line_number']
+        self.PySS_logger.debug('Line number from config: {}'.format(self.line_number))
+        self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+
+        is_restore = self.restore_master_erg()
+        if is_restore:
+            self.restore_slave_erg()
+
+        if self.missing_ergs:
+            for serial, line_number in self.missing_ergs.items():
+                self.PySS_logger.debug('Missing erg with serial num {} '
+                                       'on line number {} from last configuration'.format(serial, line_number))
+
+        self.master_erg.set_race_operation_type(0x01, 0x04)
+        self.master_erg.set_race_starting_physical_address(0x01)
+
+        self.master_erg.set_race_starting_physical_address(0xFF)
+        self.master_erg.set_race_operation_type(0xFF, 0x04)
+
+        self.master_erg.set_screen_state(0xFF, 0x07)
+
+        self.restore_line_number()
+        self.master_erg.set_screen_state(0xFF, 0x0E)
+
+    def request_new_line_number(self):
+        resp = self.master_erg.get_race_lane_request()
+        if resp:
+            erg_num = resp[0]
+            serial = resp[1]
+
+            if erg_num == 0xFD:
+                erg_num = len(self.erg_num) + self.erg_num_offset  # ToDo may be make check min(erg_num)
+                self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
+                self.master_erg.get_erg_num_confirm(erg_num, serial)
+                self.setting_erg(erg_num, serial)
+                self.master_erg.set_race_operation_type(erg_num, 0x04)
+            else:
+                self.erg_num_offset = 1
+
+            line_number = len(self.line_number) + 1
+            self.line_number[serial] = line_number
+            self.erg_num[line_number] = erg_num
+
+            self.master_erg.set_race_lane_setup(erg_num, line_number)
+            self.master_erg.set_screen_state(erg_num, 0x02)
+            self.master_erg.get_race_lane_request(erg_num, line_number)
+
+            self.PySS_logger.debug('Line number: {}'.format(self.line_number))
+            self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+
+    def number_all_erg(self):
+        self.PySS_logger.info("Start number all ergs")
+        self.line_number.clear()
+        self.erg_num.clear()
+        self.missing_ergs.clear()
+        self.erg_num_offset = 2
+
+        self.reset_all_erg()
+
+        self.master_erg.set_race_starting_physical_address(0x01)
+        self.master_erg.set_race_operation_type(0x01, 0x04)
+        self.master_erg.set_race_starting_physical_address(0xFF)
+        self.master_erg.set_race_operation_type(0xFF, 0x04)
+        self.master_erg.set_screen_state(0xFF, 0x01)
 
         try:
-            if self.address is not None:
-                self.sio = socketio.Client()
-                self.sio.connect(self.address)
-                self.sio.emit('login', {'token': self.token})
-                self.logger.info("Соединение с сервером установлено")
-        except socketio.exceptions.ConnectionError:
-            self.logger.warning(
-                'Не удалось установить соединение с сервером. '
-                'Проверьте интернет соединение или работоспособность сервера.')
+            while True:  # ToDo may me make missing_erg function
+                self.request_new_line_number()
 
-    def new_race_logger(self):
-        if self.race_file is None:
-            self.race_file = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
+        except KeyboardInterrupt:
+            # press "Done numbering"
+            self.PySS_logger.debug('Save to config line number: {}'.format(self.line_number))
+            self.config['line_number'] = self.line_number
 
-        if self.race_logger is None:
-            self.race_logger = race_logger(self.race_file)
+    def set_race_name(self):
+        self.PySS_logger.info("Set race name")
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_participant(erg_num, 0x00, self.race_name)
+
+    def set_participant_name(self):
+        self.PySS_logger.info("Start set participant name")
+        # TODO by participant name
+        for erg_num, erg_line in self.erg_num.items():
+            self.master_erg.set_race_participant(0xFF, erg_line, self.race_participant[erg_num])
+
+        self.PySS_logger.info("Start check participant name for each erg")
+        for check_erg_num in self.erg_num:
+            count_participant = self.master_erg.get_race_participant_count(check_erg_num)
+            if count_participant != len(self.race_participant):
+                for erg_num, erg_line in self.erg_num.items():
+                    self.master_erg.set_race_participant(check_erg_num, erg_line, self.race_participant[erg_num])
+
+    def set_race(self):
+        self.PySS_logger.info("Start set race")
+        # TODO by participant name
+        for erg_num in self.erg_num:
+            self.master_erg.set_screen_state(erg_num, 0x08)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, 0x06)
+
+        self.set_race_name()
+        self.set_participant_name()
+
+        for erg_num in self.erg_num:
+            self.master_erg.set_screen_state(erg_num, 0x27)
+        # TODO CSAFE_SETCALORIES_CMD
+        for erg_num in self.erg_num:
+            self.master_erg.set_screen_state(erg_num, 0x1f)
+        for erg_num in self.erg_num:
+            self.master_erg.set_workout_type(erg_num, 0x00)
+            self.master_erg.set_screen_state(erg_num, 0x03)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, 0x0C)
+
+    def prepare_to_race(self):
+        self.PySS_logger.info("Prepare to race")
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, [0x06, 0x9d, 0x83])
+        for erg_num in self.erg_num:
+            self.master_erg.set_cpu_tick_rate(erg_num, 0x02)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, 0x07)
+        self.master_erg.foo(0xff)
+        for erg_num in self.erg_num:
+            self.master_erg.latch_tick_time(erg_num)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, 0x06)
+        for erg_num in self.erg_num:
+            self.master_erg.set_all_race_params(erg_num, self.distance)
+            self.master_erg.configure_workout(erg_num)
+            self.master_erg.set_screen_state(erg_num, 0x04)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_operation_type(erg_num, 0x08)
+
+        self.erg_race.set_config_race(len(self.erg_num), self.team_size, self.distance)
+
+    def start_race(self):
+        self.PySS_logger.info("Start race")
+        # latch_time = self.master_erg.get_latched_tick_time(0x01)  # as in erg_race
+        # TODO check_flywheels_moving
+        for erg_num in self.erg_num:
+            self.master_erg.get_erg_info(erg_num)
+
+        latch_time = self.master_erg.get_latched_tick_time(0x01)
+        params = get_start_param(latch_time)
+        for erg_num in self.erg_num:
+            self.master_erg.set_race_start_params(erg_num, params)
+            self.master_erg.set_race_operation_type(erg_num, 0x09)
+
+        self.wait(3)  # TODO check false start
+
+    def process_race_data(self):
+        self.PySS_logger.info("Race data from ergs")
+        try:
+            while True:
+                for erg_num, line_number in self.erg_num.items():
+                    cmd_data = self.erg_race.get_update_race_data(line_number)
+                    resp = self.master_erg.update_race_data(erg_num, cmd_data)
+                    self.erg_race.set_update_race_data(line_number, resp)
+                sleep(1)  # ToDO sleep time
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            print(e)
+        finally:
+            self.close()
+
+    def close(self):
+        self.PySS_logger.info("Close race")
+        self.master_erg.set_race_operation_type(0x01, 0x06)
+        self.master_erg.set_screen_state(0xFF, 0x06)
+        sleep(0.5)
+
+        self.master_erg.set_race_operation_type(0xFF, 0x06)
+        self.master_erg.set_screen_state(0xFF, 0x15)
+        sleep(0.5)
+
+        self.master_erg.set_screen_state(0xFF, 0x27)
+        self.master_erg.set_race_operation_type(0xFF, 0x00)
+
+    def wait(self, time=0):
+        if time:
+            for _ in range(time):
+                for erg_num in self.erg_num:
+                    self.master_erg.get_erg_info(erg_num)
+                sleep(1)
         else:
-            handlers = self.race_logger.handlers[:]
-            for handler in handlers:
-                handler.close()
-                self.race_logger.removeHandler(handler)
-            self.race_file = "{}_{:%Y-%m-%d_%H-%M-%S}.log".format(self.race_name, datetime.now())
-            self.race_logger = race_logger(self.race_file)
+            try:
+                while True:
+                    for erg_num in self.erg_num:
+                        self.master_erg.get_erg_info(erg_num)
+                    sleep(1)
+            except KeyboardInterrupt:
+                pass
 
-        self.logger.info("Init Race Log File: {}".format(self.race_file))
 
-    def restore_config(self):
-        self.address = self.config.address
-        self.token = self.config.token
+class PyStrokeSideConsole:
+    def __init__(self):
+        self.pySS = PyStrokeSide()
+        self.ergs = self.pySS.discovering_erg()
 
-        self.total_distance = self.config.total_distance
-        self.race_name = self.config.race_name
-        self.race_file = self.config.race_file
-        self.race_team = self.config.race_team
+        self.cmd = {}
 
-        self.erg_line = self.config.erg_line
-        self.participant_name = self.config.participant_name
-
-    def write_config(self):
-        if self.address is not None:
-            self.config['SERVER']['address'] = self.address
-        if self.token is not None:
-            self.config['SERVER']['token'] = self.token
-
-        self.config['RACE']['total_distance'] = self.total_distance
-        self.config['RACE']['race_name'] = self.race_name
-        self.config['RACE']['race_file'] = self.race_file
-        self.config['RACE']['race_team'] = self.race_team
-
-        self.config['NUMERATION_ERG'] = {}
-        for erg, line in self.erg_line.items():
-            self.config['NUMERATION_ERG'][str(erg)] = line
-
-        # UNICODE
-        # restore from file
-        self.config['PARTICIPANT_NAME'] = {}
-        for line, name in self.participant_name.items():
-            self.config['PARTICIPANT_NAME'][str(line)] = name
-
-        self.config.write()
-
-    def check_team_race(self):
-        count_member = (len(self.participant_name) / len(set(self.participant_name.values())))
-        if count_member in [2, 4, 8]:
-            self.race_team = int(count_member)
-        else:
-            self.race_team = 1
-
-        self.race_data.clear()
-        self.team_data.clear()
-
-    def get_team_data(self):
-        for line in range(1, len(self.participant_name), self.race_team):  # sub race_data for each team
-            sub_race_data = [self.race_data[i] for i in range(line, line + self.race_team)]
-            team_name = sub_race_data[0]['participant_name']
-            team_lines = "-".join([str(line), str(line + self.race_team - 1)])
-
-            team_distance = round(sum([participant['distance'] for participant in sub_race_data]) / self.race_team, 1)
-            team_time = round(sum([participant['time'] for participant in sub_race_data]) / self.race_team, 2)
-            team_stroke = round(sum([participant['stroke'] for participant in sub_race_data]) / self.race_team)
-            team_split = round(500 * (team_time / team_distance) if team_distance != 0 else 0, 2)  # may be 2 digit
-
-            if team_distance > self.total_distance and self.finish_time[line] == 0:
-                self.finish_time[line] = team_time
-
-            if self.finish_time[line] != 0:
-                team_time = self.finish_time[line]
-                team_distance = self.total_distance
-                team_split = round(500 * (team_time/team_distance), 2)
-
-            # self.logger.info((team_distance, team_time))
-            # self.logger.info(self.finish_time[line])
-
-            team_data = dict(line=team_lines,
-                             participant_name=team_name,
-                             distance=team_distance,
-                             time=team_time,
-                             stroke=team_stroke,
-                             split=team_split)
-
-            self.team_data[team_lines] = team_data
-
-    def send_race_data(self):
-        data = dict(timestamps=datetime.now().isoformat(sep=" ", timespec='seconds'),
-                    race_name=self.race_name,
-                    total_distance=self.total_distance,
-                    race_data=list(self.race_data.values()))
-
-        self.race_logger.info(json.dumps(data))
-
-        if self.race_team != 1:
-            self.get_team_data()
-            data['race_data'] = list(self.team_data.values())
-            self.logger.info(self.team_data)
-        else:
-            self.logger.info(self.race_data)
-
-        if self.address is not None:
-            self.sio.emit('send_data', {'data': data})
-            self.logger.info("send data to server")
-
-        time.sleep(self.timeout)
-
-    def set_race_participant_command(self, cmd):
-        line = cmd[8]
-        if cmd[2] == list(self.erg_line)[0] and line == 0:  # name race
-            self.race_name = _bytes2ascii(cmd[9:9 + cmd[7] - 2])
-
-            self.logger.info("Start new race: {}".format(self.race_name))
-            self.logger.debug(_int2bytes(cmd))
-        # UNICODE
-        elif cmd[2] == 0xFF:  # name participant
-            if line == list(self.participant_name)[0]:
-                self.participant_name.clear()
-                self.logger.info("Clear participant name")
-            self.participant_name[line] = _bytes2ascii(cmd[9:9 + cmd[7] - 2]).encode('utf-8').decode('cp1251')
-
-            self.logger.info("Lane {} have name: {}".format(line, self.participant_name[line]))
-            self.logger.debug(_int2bytes(cmd))
-
-    def set_race_lane_setup_command(self, cmd):
-        if len(self.erg_line):
-            if cmd[2] == list(self.erg_line)[0]:
-                self.erg_line.clear()
-                self.logger.info("Clear erg line")
-        self.erg_line[cmd[2]] = cmd[8]
-
-        self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
-        self.logger.debug(_int2bytes(cmd))
-
-    def set_all_race_params_command(self, cmd):
-        if cmd[2] == list(self.erg_line)[0]:
-            self.total_distance = _bytes2int(cmd[30:34])
-            self.logger.info("set distance: {}".format(self.total_distance))
-            self.logger.debug(_int2bytes(cmd))
-
-            self.new_race_logger()
-            self.check_team_race()
-            self.finish_time = {line: 0 for line in self.participant_name}
-
-            self.write_config()
-
-    def update_race_data_response(self, resp):
-        src = resp[3]
-
-        distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
-        time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
-        stroke = resp[24]  # stroke
-        split = round(500 * (time / distance) if distance != 0 else 0, 2)
-
-        erg_data = dict(line=self.erg_line[src],
-                        participant_name=self.participant_name[self.erg_line[src]],
-                        distance=distance,
-                        time=time,
-                        stroke=stroke,
-                        split=split)
-        self.race_data[self.erg_line[src]] = erg_data
-
-        self.logger.info(erg_data)
-        self.logger.debug(_int2bytes(resp))
-
-        if src == list(self.erg_line)[-1] and len(self.race_data) != 0:
-            self.send_race_data()
-
-    def handler(self, cmd):
-        if cmd[4] == 0x76 and cmd[6] == 0x32:
-            self.set_race_participant_command(cmd)
-        elif cmd[4] == 0x7e and cmd[6] == 0x0b:
-            self.set_race_lane_setup_command(cmd)
-        elif cmd[5] == 0x76 and cmd[7] == 0x33:
-            self.update_race_data_response(cmd)
-        elif cmd[4] == 0x76 and cmd[6] == 0x1d:
-            self.set_all_race_params_command(cmd)
-
-    @staticmethod
-    def byte_staffing(cmd):
-        while b"\xf3\x00" in cmd:
-            cmd = cmd.replace(b"\xf3\x00", b"\xf0")
-        while b"\xf3\x01" in cmd:
-            cmd = cmd.replace(b"\xf3\x01", b"\xf1")
-        while b"\xf3\x02" in cmd:
-            cmd = cmd.replace(b"\xf3\x02", b"\xf2")
-        while b"\xf3\x03" in cmd:
-            cmd = cmd.replace(b"\xf3\x03", b"\xf3")
-
-        return cmd
-
-    def sniffing(self):
-        #self.usbpcapcmd.find_erg()
-        self.usbpcapcmd.capture()
-        buffer = b""
+    def run(self):
+        if self.ergs:
+            self.pySS.master_erg = self.ergs[0]
+            self.pySS.restore_erg()
+            self.pySS.wait(5)
 
         while True:
-            buffer += self.usbpcapcmd.recv()
-            if b"\x02\xf0" in buffer and b"\xf2" in buffer:
-                cmd = buffer[buffer.find(b"\x02\xf0"):buffer.find(b"\xf2") + 1]
-                if cmd:
-                    raw_cmd = _int2bytes(cmd)
-                    try:
-                        line = parse_raw_cmd(raw_cmd.split(' '))
-                        self.raw_logger.info("{},{}".format(line.pop('cmd'), ','.join(list(line.values()))))
-                    except Exception as e:
-                        self.raw_logger.warning(e)
-                        self.raw_logger.warning(raw_cmd)
-                    self.raw_logger.debug(raw_cmd)
-                    cmd = self.byte_staffing(cmd)
-                    self.handler([c for c in cmd])
+            if self.read():
+                break
 
-            buffer = buffer[buffer.find(b"\xf2") + 1:]
+    def read(self):
+        line = sys.stdin.readline()
+        if line:
+            self.cmd = json.loads(line[:-1])
+            self.pySS.PySS_logger.debug("receive {}".format(self.cmd))
+        else:
+            return {}
+        sys.stdin.flush()
+
+    def handler(self):
+        if 'erg_numeration' in self.cmd:
+            if 'number_all_ergs' in self.cmd['erg_numeration']:
+                self.pySS.number_all_erg()
+                self.cmd = {'erg_numeration': {'request_new_line_number': ''}}
+            elif 'request_new_line_number' in self.cmd['erg_numeration']:
+                self.pySS.request_new_line_number()
+            elif 'number_erg_done' in self.cmd['erg_numeration']:
+                self.pySS.PySS_logger.debug('Save to config line number: {}'.format(self.pySS.line_number))
+                self.pySS.config['line_number'] = self.pySS.line_number
+                self.cmd = {}
+            elif 'number_missing_ergs' in self.cmd['erg_numeration']:
+                pass
 
 
-if __name__ == "__main__":
-    race = PyStrokeSide()
-    race.usbpcapcmd = USBPcapCMD()
-    race.sniffing()
+if __name__ == '__main__':
+
+    console = PyStrokeSideConsole()
+    console.run()
+
+
+
     """
-    while True:
-        try:
-            race.sniffing()
-        except KeyboardInterrupt:
-            sys.exit()
-        except BaseException as e:
-            race.logger.critical("{} {}".format(e, e.args))
-        finally:
-            race.logger.info("Close sniffer")
+    pySS.set_race()
+    pySS.wait(5)
+
+    pySS.prepare_to_race()
+    pySS.wait(10)
+
+    pySS.start_race()
+
+    pySS.process_race_data()
+
+    pySS.wait(5)
+    pySS.close()
     """
+
+
 

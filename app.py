@@ -14,13 +14,15 @@ class ExampleApp(QtWidgets.QMainWindow, PyStrokeSideGUI.Ui_MainWindow):
         self.setupUi(self)  # Это нужно для инициализации нашего дизайна
 
         # self.PySS = MasterSlavePyStrokeSide()
-        self.process = Popen('python MasterSlavePyStrokeSide.py',
+        self.process = Popen('python PyStrokeSide.py',
                              stdout=PIPE,
                              stdin=PIPE,
                              shell=True,
                              universal_newlines=True)
 
         self.btn_number_all_ergs.clicked.connect(lambda x: self.write({"erg_numeration": {"number_all_ergs": ""}}))
+        self.btn_number_missing_ergs.clicked.connect(lambda x: self.write({"erg_numeration": {"number_missing_ergs": ""}}))
+        self.btn_number_done.clicked.connect(lambda x: self.write({"erg_numeration": {"number_erg_done": ""}}))
 
     def write(self, cmd):
         cmd = json.dumps(cmd) + '\n'
