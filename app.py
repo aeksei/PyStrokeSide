@@ -3,7 +3,7 @@ import json
 
 from PyQt5 import QtWidgets, QtCore
 from GUI import PyStrokeSideGUI  # Это наш конвертированный файл дизайна
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE
 
 
 class ExampleApp(QtWidgets.QMainWindow, PyStrokeSideGUI.Ui_MainWindow):

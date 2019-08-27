@@ -336,7 +336,10 @@ class PyStrokeSideConsole:
             self.pySS.master_erg = self.ergs[0]
             self.pySS.restore_erg()
             self.pySS.wait(5)
+        else:
+            self.write({'erg_numeration': {'Not found ergs': ''}})
 
+        # move to up condition
         while True:
             if self.read():
                 break
@@ -349,6 +352,12 @@ class PyStrokeSideConsole:
         else:
             return {}
         sys.stdin.flush()
+
+    def write(self, cmd):
+        self.pySS.PySS_logger.debug("send to server {}".format(cmd))
+        cmd = json.dumps(cmd) + '\n'
+        sys.stdout.write(cmd)
+        sys.stdout.flush()
 
     def handler(self):
         if 'erg_numeration' in self.cmd:
