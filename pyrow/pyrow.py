@@ -27,9 +27,7 @@ from test.parser import parse_raw_cmd
 
 import usb.backend.libusb1
 from ctypes import c_void_p, c_int
-path = 'C:\\Users\\aeksei\\PycharmProjects\\PyStrokeSide\\libusb\\libusb-1.0.dll'
-#backend = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
-backend = usb.backend.libusb1.get_backend(find_library=lambda x: path)
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
 backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
 backend.lib.libusb_set_option(backend.ctx, 1)  # <--- this is the magic call to enable usbdk mode
 

@@ -324,6 +324,10 @@ class PyStrokeSide:
 
 class PyStrokeSideConsole:
     def __init__(self):
+        with open("logging.json", "r") as f:
+            logging.config.dictConfig(json.load(f))
+        self.logger = logging.getLogger("PySSConsole")
+
         self.ergs = pyrow.find()
         if self.ergs:
             self.pySS = PyStrokeSide(self.ergs[0])
@@ -332,28 +336,31 @@ class PyStrokeSideConsole:
 
     def run(self):
         if self.ergs:
-            # self.pySS.master_erg = self.ergs[0]
+            self.pySS.master_erg = self.ergs[0]
             self.pySS.restore_erg()
             self.pySS.wait(5)
         else:
+            pass
             self.write({'erg_numeration': {'Not found ergs': ''}})
 
         # move to up condition
         while True:
             self.read()
-            self.pySS.PySS_logger.debug("ololo")
-
+            self.logger.debug("ololo")
             self.handler()
+
 
     def read(self):
         line = sys.stdin.readline()
         if line:
             self.cmd = json.loads(line[:-1])
-            self.pySS.PySS_logger.debug("receive {}".format(self.cmd))
+            self.logger.debug("receive from server{}".format(self.cmd))
+        else:
+            self.logger.debug("wait")
         sys.stdin.flush()
 
     def write(self, cmd):
-        self.pySS.PySS_logger.debug("send to server {}".format(cmd))
+        self.logger.debug("send to server {}".format(cmd))
         cmd = json.dumps(cmd) + '\n'
         sys.stdout.write(cmd)
         sys.stdout.flush()
@@ -361,13 +368,13 @@ class PyStrokeSideConsole:
     def handler(self):
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
-                self.pySS.number_all_erg()
+                # self.pySS.number_all_erg()
                 self.cmd = {'erg_numeration': {'request_new_line_number': ''}}
             elif 'request_new_line_number' in self.cmd['erg_numeration']:
-                self.pySS.PySS_logger.debug('request_new_line_number')
-                self.pySS.request_new_line_number()
+                self.logger.debug('request_new_line_number')
+                # self.pySS.request_new_line_number()
             elif 'number_erg_done' in self.cmd['erg_numeration']:
-                self.pySS.number_erg_done()
+                # self.pySS.number_erg_done()
                 self.cmd = {"o"}
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass

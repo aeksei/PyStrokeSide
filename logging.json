@@ -32,6 +32,10 @@
         "PySS": {
             "handlers": ["console", "rotating_file"],
             "level": "DEBUG"
+        },
+        "PySSConsole": {
+            "handlers": ["console", "rotating_file"],
+            "level": "DEBUG"
         }
     }
 }
