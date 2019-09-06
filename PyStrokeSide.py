@@ -192,7 +192,7 @@ class PyStrokeSide:
         self.master_erg.set_race_starting_physical_address(0xFF)
         self.master_erg.set_race_operation_type(0xFF, 0x04)
         self.master_erg.set_screen_state(0xFF, 0x01)
-
+        """
         try:
             while True:  # ToDo may me make missing_erg function
                 self.request_new_line_number()
@@ -201,6 +201,11 @@ class PyStrokeSide:
             # press "Done numbering"
             self.PySS_logger.debug('Save to config line number: {}'.format(self.line_number))
             self.config['line_number'] = self.line_number
+        """
+
+    def number_erg_done(self):
+        self.PySS_logger.debug('Save to config line number: {}'.format(self.line_number))
+        self.config['line_number'] = self.line_number
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
@@ -367,19 +372,15 @@ class PyStrokeSideConsole:
             elif 'request_new_line_number' in self.cmd['erg_numeration']:
                 self.pySS.request_new_line_number()
             elif 'number_erg_done' in self.cmd['erg_numeration']:
-                self.pySS.PySS_logger.debug('Save to config line number: {}'.format(self.pySS.line_number))
-                self.pySS.config['line_number'] = self.pySS.line_number
+                self.pySS.number_erg_done()
                 self.cmd = {}
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass
 
 
 if __name__ == '__main__':
-
     console = PyStrokeSideConsole()
     console.run()
-
-
 
     """
     pySS.set_race()
