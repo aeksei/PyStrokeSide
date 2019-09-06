@@ -27,7 +27,9 @@ from test.parser import parse_raw_cmd
 
 import usb.backend.libusb1
 from ctypes import c_void_p, c_int
-backend = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
+path = 'C:\\Users\\aeksei\\PycharmProjects\\PyStrokeSide\\libusb\\libusb-1.0.dll'
+#backend = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: path)
 backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
 backend.lib.libusb_set_option(backend.ctx, 1)  # <--- this is the magic call to enable usbdk mode
 
@@ -140,15 +142,14 @@ def find():
     """
     Returns list of pyusb Devices which are ergs.
     """
+    ergs = []
     try:
         ergs = usb.core.find(find_all=True, idVendor=C2_VENDOR_ID, backend=backend)
     # Checks for USBError 16: Resource busy
     except USBError as e:
         if e.errno != 16:
             raise ConnectionRefusedError("USB busy")
-    if not list(ergs):
-        raise ValueError('Ergs not found')
-    return ergs
+    return list(ergs)
 
 
 class PyErg(object):
