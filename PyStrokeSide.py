@@ -1,5 +1,6 @@
 import sys
 import json
+import asyncio
 import logging.config
 from time import sleep
 from pyrow import pyrow
@@ -323,7 +324,7 @@ class PyStrokeSide:
 
 
 class PyStrokeSideConsole:
-    def __init__(self):
+    def __init__(self, loop):
         with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.logger = logging.getLogger("PySSConsole")
@@ -334,7 +335,11 @@ class PyStrokeSideConsole:
 
         self.cmd = {}
 
-    def run(self):
+        self.loop = loop
+        self.reader = asyncio.StreamReader(loop=self.loop)
+        self.reader_protocol = asyncio.StreamReaderProtocol(self.reader)
+
+    async def main(self):
         if self.ergs:
             self.pySS.master_erg = self.ergs[0]
             self.pySS.restore_erg()
@@ -344,19 +349,19 @@ class PyStrokeSideConsole:
             self.write({'erg_numeration': {'Not found ergs': ''}})
 
         # move to up condition
+        await self.loop.connect_read_pipe(lambda: self.reader_protocol, sys.stdin)
         while True:
-            self.read()
+            await self.read()
             self.logger.debug("ololo")
-            self.handler()
+            await self.handler()
 
-
-    def read(self):
-        line = sys.stdin.readline()
+    async def read(self):
+        line = await self.reader.readline()
         if line:
             self.cmd = json.loads(line[:-1])
             self.logger.debug("receive from server{}".format(self.cmd))
         else:
-            self.logger.debug("wait")
+            self.logger.debug("close subprosess")
         sys.stdin.flush()
 
     def write(self, cmd):
@@ -365,13 +370,15 @@ class PyStrokeSideConsole:
         sys.stdout.write(cmd)
         sys.stdout.flush()
 
-    def handler(self):
+    async def handler(self):
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
                 # self.pySS.number_all_erg()
                 self.cmd = {'erg_numeration': {'request_new_line_number': ''}}
             elif 'request_new_line_number' in self.cmd['erg_numeration']:
                 self.logger.debug('request_new_line_number')
+                while True:
+                    await self.logger.debug('request_new_line_number')
                 # self.pySS.request_new_line_number()
             elif 'number_erg_done' in self.cmd['erg_numeration']:
                 # self.pySS.number_erg_done()
@@ -381,8 +388,10 @@ class PyStrokeSideConsole:
 
 
 if __name__ == '__main__':
-    console = PyStrokeSideConsole()
-    console.run()
+    loop = asyncio.ProactorEventLoop()
+    asyncio.set_event_loop(loop)
+    console = PyStrokeSideConsole(loop)
+    asyncio.run(console.main())
 
     """
     pySS.set_race()
