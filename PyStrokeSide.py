@@ -335,9 +335,6 @@ class PyStrokeSideConsole:
 
         self.cmd = {}
 
-        self.loop = loop
-        self.reader = asyncio.StreamReader(loop=self.loop)
-        self.reader_protocol = asyncio.StreamReaderProtocol(self.reader)
 
     async def main(self):
         if self.ergs:
@@ -348,12 +345,7 @@ class PyStrokeSideConsole:
             pass
             self.write({'erg_numeration': {'Not found ergs': ''}})
 
-        # move to up condition
-        await self.loop.connect_read_pipe(lambda: self.reader_protocol, sys.stdin)
-        while True:
-            await self.read()
-            self.logger.debug("ololo")
-            await self.handler()
+
 
     async def read(self):
         line = await self.reader.readline()

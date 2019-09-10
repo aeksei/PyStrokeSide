@@ -1,5 +1,7 @@
 import sys  # sys нужен для передачи argv в QApplication
 import json
+import asyncio
+from server import *
 
 from PyQt5 import QtWidgets, QtCore
 from GUI import PyStrokeSideGUI  # Это наш конвертированный файл дизайна
@@ -21,10 +23,9 @@ class ExampleApp(QtWidgets.QMainWindow, PyStrokeSideGUI.Ui_MainWindow):
                              shell=True,
                              universal_newlines=True)
 
-
-        self.btn_number_all_ergs.clicked.connect(lambda x: self.write({"erg_numeration": {"number_all_ergs": ""}}))
-        self.btn_number_missing_ergs.clicked.connect(lambda x: self.write({"erg_numeration": {"number_missing_ergs": ""}}))
-        self.btn_number_done.clicked.connect(lambda x: self.write({"erg_numeration": {"number_erg_done": ""}}))
+        self.btn_number_all_ergs.clicked.connect(lambda x: sio.emit({"erg_numeration": {"number_all_ergs": ""}}))
+        self.btn_number_missing_ergs.clicked.connect(lambda x: sio.emit({"erg_numeration": {"number_missing_ergs": ""}}))
+        self.btn_number_done.clicked.connect(lambda x: sio.emit({"erg_numeration": {"number_erg_done": ""}}))
 
     def write(self, cmd):
         cmd = json.dumps(cmd) + '\n'
@@ -32,13 +33,19 @@ class ExampleApp(QtWidgets.QMainWindow, PyStrokeSideGUI.Ui_MainWindow):
         self.process.stdin.flush()
 
 
-
-def main():
+async def main():
     app = QtWidgets.QApplication(sys.argv)  # Новый экземпляр QApplication
     window = ExampleApp()  # Создаём объект класса ExampleApp
-    window.show()  # Показываем окно
+    await window.show()  # Показываем окно
     app.exec_()  # и запускаем приложение
 
 
 if __name__ == '__main__':  # Если мы запускаем файл напрямую, а не импортируем
-    main()  # то запускаем функцию main()
+    loop = asyncio.get_event_loop()
+
+    asyncio.ensure_future(main())
+    asyncio.ensure_future(run())
+
+    loop.run_forever()
+    #main()  # то запускаем функцию main()
+    #run()
