@@ -30,8 +30,11 @@ class PyStrokeSide:
         self.race_name = self.config['race_name']
         self.race_participant = self.config['race_participant']
 
-        self.distance = 1000
+        self.distance = 100
         self.team_size = 1
+
+        self.is_request_new_line = False
+        self.is_race_start = False
 
     def reset_all_erg(self):  # reset all
         self.PySS_logger.info("Start reset all ergs")
@@ -147,30 +150,34 @@ class PyStrokeSide:
         self.master_erg.set_screen_state(0xFF, 0x0E)
 
     def request_new_line_number(self):
-        resp = self.master_erg.get_race_lane_request()
-        if resp:
-            erg_num = resp[0]
-            serial = resp[1]
+        self.PySS_logger.info("Start request new line number from ergs")
+        while self.is_request_new_line:
+            resp = self.master_erg.get_race_lane_request()
+            if resp:
+                erg_num = resp[0]
+                serial = resp[1]
 
-            if erg_num == 0xFD:
-                erg_num = len(self.erg_num) + self.erg_num_offset  # ToDo may be make check min(erg_num)
-                self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
-                self.master_erg.get_erg_num_confirm(erg_num, serial)
-                self.setting_erg(erg_num, serial)
-                self.master_erg.set_race_operation_type(erg_num, 0x04)
-            else:
-                self.erg_num_offset = 1
+                if erg_num == 0xFD:
+                    erg_num = len(self.erg_num) + self.erg_num_offset  # ToDo may be make check min(erg_num)
+                    self.master_erg.set_erg_num(erg_num, serial)  # set new erg_num
+                    self.master_erg.get_erg_num_confirm(erg_num, serial)
+                    self.setting_erg(erg_num, serial)
+                    self.master_erg.set_race_operation_type(erg_num, 0x04)
+                else:
+                    self.erg_num_offset = 1
 
-            line_number = len(self.line_number) + 1
-            self.line_number[serial] = line_number
-            self.erg_num[line_number] = erg_num
+                line_number = len(self.line_number) + 1
+                self.line_number[serial] = line_number
+                self.erg_num[line_number] = erg_num
 
-            self.master_erg.set_race_lane_setup(erg_num, line_number)
-            self.master_erg.set_screen_state(erg_num, 0x02)
-            self.master_erg.get_race_lane_request(erg_num, line_number)
+                self.master_erg.set_race_lane_setup(erg_num, line_number)
+                self.master_erg.set_screen_state(erg_num, 0x02)
+                self.master_erg.get_race_lane_request(erg_num, line_number)
 
-            self.PySS_logger.debug('Line number: {}'.format(self.line_number))
-            self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+                self.PySS_logger.debug('Line number: {}'.format(self.line_number))
+                self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
+            if len(self.erg_num) == 3:
+                self.is_request_new_line = False
 
     def number_all_erg(self):
         self.PySS_logger.info("Start number all ergs")
@@ -186,20 +193,13 @@ class PyStrokeSide:
         self.master_erg.set_race_starting_physical_address(0xFF)
         self.master_erg.set_race_operation_type(0xFF, 0x04)
         self.master_erg.set_screen_state(0xFF, 0x01)
-        """
-        try:
-            while True:  # ToDo may me make missing_erg function
-                self.request_new_line_number()
-
-        except KeyboardInterrupt:
-            # press "Done numbering"
-            self.PySS_logger.debug('Save to config line number: {}'.format(self.line_number))
-            self.config['line_number'] = self.line_number
-        """
 
     def number_erg_done(self):
+        self.PySS_logger.info("Erg numbering Done")
         self.PySS_logger.debug('Save to config line number: {}'.format(self.line_number))
         self.config['line_number'] = self.line_number
+        self.config['erg_num'] = self.erg_num
+        self.restore_erg()
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
@@ -281,7 +281,7 @@ class PyStrokeSide:
     def process_race_data(self):
         self.PySS_logger.info("Race data from ergs")
         try:
-            while True:
+            while True:  # TODO is_race_start
                 for erg_num, line_number in self.erg_num.items():
                     cmd_data = self.erg_race.get_update_race_data(line_number)
                     resp = self.master_erg.update_race_data(erg_num, cmd_data)
@@ -324,8 +324,8 @@ class PyStrokeSide:
 
 
 class PyStrokeSideSocketIO:
+    id_cmd = 'read_from'
     sio = socketio.Client()
-    id_cmd = 'test'
 
     def __init__(self):
         with open("logging.json", "r") as f:
@@ -341,37 +341,40 @@ class PyStrokeSideSocketIO:
             self.pySS.close()
 
         self.cmd = dict()
-        self.request_new_number = False
 
-    @sio.on(id_cmd, json)
-    def handler(self):
+        self.server_url = 'http://server.strokeside.ru:9090'
+        self.sio.connect(self.server_url)
+
+    @sio.on(id_cmd)
+    def handler(self, cmd):
+        self.cmd = json.loads(cmd)
+        self.logger.debug("Receive from server {}".format(cmd))
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
                 self.pySS.number_all_erg()
-
-            elif 'request_new_line_number' in self.cmd['erg_numeration']:
-                self.logger.debug('request_new_line_number')
-                while True:
-                    self.logger.debug('request_new_line_number')
-                # self.pySS.request_new_line_number()
+                self.pySS.is_request_new_line = True
+                self.sio.start_background_task(self.pySS.request_new_line_number)
             elif 'number_erg_done' in self.cmd['erg_numeration']:
-                # self.pySS.number_erg_done()
-                self.cmd = {"o"}
+                self.pySS.is_request_new_line = False
+                self.pySS.number_erg_done()
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass
 
 
 if __name__ == '__main__':
-    console = PyStrokeSideSocketIO()
+    #console = PyStrokeSideSocketIO()
+    pySS = None
+    ergs = pyrow.find()
+    if ergs:
+        pySS = PyStrokeSide(ergs[0])
 
-
-    """
-    pySS = PyStrokeSide()
     pySS.restore_erg()
     pySS.wait(5)
 
     pySS.number_all_erg()
-    pySS.restore_erg()
+    pySS.is_request_new_line = True
+    pySS.request_new_line_number()
+    pySS.number_erg_done()
 
     pySS.set_race()
     pySS.wait(5)
@@ -385,7 +388,7 @@ if __name__ == '__main__':
 
     pySS.wait(5)
     pySS.close()
-    """
+
 
 
 
