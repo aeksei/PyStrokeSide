@@ -27,12 +27,11 @@ class PyStrokeSide:
         self.erg_num = {}
         self.missing_ergs = {}  # may be use for setting erg
 
-        self.race_name = self.config['race_name']
+        #self.race_name = self.config['race_name']
         self.race_participant = self.config['race_participant']
 
-        self.distance = 100
-        self.team_size = 1
-
+        #self.distance = 100
+        #self.team_size = 1 #командная или одиночная
         self.is_request_new_line = False
         self.is_race_start = False
 
@@ -201,8 +200,8 @@ class PyStrokeSide:
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
-        for line in self.race_participant:
-            self.master_erg.set_race_participant(self.erg_num[line], 0x00, self.race_name)
+        for line in self.race_participant: #race_participant - количество учасников
+            self.master_erg.set_race_participant(self.erg_num[line], 0x00, self.config['race_name'])
 
     def set_participant_name(self):
         self.PySS_logger.info("Start set participant name")
@@ -228,8 +227,8 @@ class PyStrokeSide:
         for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
 
-        self.set_race_name()
-        self.set_participant_name()
+        self.set_race_name() #
+        self.set_participant_name() #имена пользователей
 
         for erg_num in self.erg_num:
             self.master_erg.set_screen_state(erg_num, 0x27)
@@ -256,13 +255,13 @@ class PyStrokeSide:
         for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
         for erg_num in self.erg_num:
-            self.master_erg.set_all_race_params(erg_num, self.distance)
+            self.master_erg.set_all_race_params(erg_num, self.config['race_defenition']['distance'])
             self.master_erg.configure_workout(erg_num)
             self.master_erg.set_screen_state(erg_num, 0x04)
         for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
-        self.erg_race.set_config_race(len(self.erg_num), self.team_size, self.distance)
+        self.erg_race.set_config_race(len(self.erg_num), self.config['race_defenition']['team_size'], self.config['race_defenition']['distance'])
 
     def start_race(self):
         self.PySS_logger.info("Start race")
@@ -351,6 +350,9 @@ class PyStrokeSideSocketIO:
     def disconnect(self):
         self.logger.info("Disconnection from server")
 
+
+
+
     def handler(self, cmd):
         self.cmd = json.loads(cmd)
         self.logger.debug("Receive from server {}".format(cmd))
@@ -365,6 +367,16 @@ class PyStrokeSideSocketIO:
                 self.pySS.number_erg_done()
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass
+        elif 'race_defenition' in self.cmd:
+            if 'race_participant' in self.cmd['race_defenition']: #проверяем есть ли race_participant и записываем в конфиг и pySS изменения
+                self.pySS.config['race_participant'] = self.cmd['race_defenition']['race_participant']
+                self.pySS.config['race_name'] = self.cmd['race_defenition']['race_name']
+                self.pySS.config['team_size'] = self.cmd['race_defenition']['team_size']
+                self.pySS.config['distance'] = self.cmd['race_defenition']['distance']
+                self.pySS.race_participant = self.cmd['race_defenition']['race_participant']
+                #self.pySS.distance = self.cmd['race_defenition']['distance']
+                self.pySS.race_name=self.cmd['race_defenition']['race_name']
+                #self.pySS.team_size=self.cmd['race_defenition']['team_size']
 
 
 if __name__ == '__main__':
@@ -383,7 +395,7 @@ if __name__ == '__main__':
     # pySS.request_new_line_number()
     # pySS.number_erg_done()
     #
-    # pySS.set_race()
+    # pySS.set_race() #
     # pySS.wait(5)
     #
     # pySS.prepare_to_race()
