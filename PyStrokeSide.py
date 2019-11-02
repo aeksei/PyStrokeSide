@@ -176,8 +176,6 @@ class PyStrokeSide:
 
                 self.PySS_logger.debug('Line number: {}'.format(self.line_number))
                 self.PySS_logger.debug('Erg number: {}'.format(self.erg_num))
-            if len(self.erg_num) == 3:
-                self.is_request_new_line = False
 
     def number_all_erg(self):
         self.PySS_logger.info("Start number all ergs")
@@ -203,21 +201,24 @@ class PyStrokeSide:
 
     def set_race_name(self):
         self.PySS_logger.info("Set race name")
-        for erg_num in self.erg_num:
-            self.master_erg.set_race_participant(erg_num, 0x00, self.race_name)
+        for line in self.race_participant:
+            self.master_erg.set_race_participant(self.erg_num[line], 0x00, self.race_name)
 
     def set_participant_name(self):
         self.PySS_logger.info("Start set participant name")
         # TODO by participant name
-        for erg_num, erg_line in self.erg_num.items():
-            self.master_erg.set_race_participant(0xFF, erg_line, self.race_participant[erg_num])
+        for erg_line, race_partition_name in self.race_participant.items():
+            self.master_erg.set_race_participant(0xFF, erg_line, race_partition_name)
 
         self.PySS_logger.info("Start check participant name for each erg")
         for check_erg_num in self.erg_num:
+            # опросить каждый концепт и убедиться в том, что количество участников совпадает
+            # с количеством установленных на концепте участников
             count_participant = self.master_erg.get_race_participant_count(check_erg_num)
+            # в случае не совпадения, занова установить имена участников
             if count_participant != len(self.race_participant):
-                for erg_num, erg_line in self.erg_num.items():
-                    self.master_erg.set_race_participant(check_erg_num, erg_line, self.race_participant[erg_num])
+                for erg_line, race_partition_name in self.race_participant.items():
+                    self.master_erg.set_race_participant(check_erg_num, erg_line, race_partition_name)
 
     def set_race(self):
         self.PySS_logger.info("Start set race")
@@ -324,9 +325,6 @@ class PyStrokeSide:
 
 
 class PyStrokeSideSocketIO:
-    id_cmd = 'read_from'
-    sio = socketio.Client()
-
     def __init__(self):
         with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
@@ -336,19 +334,27 @@ class PyStrokeSideSocketIO:
         if self.ergs:
             self.pySS = PyStrokeSide(self.ergs[0])
             self.pySS.restore_erg()
-            self.pySS.wait(5)
-
-            self.pySS.close()
 
         self.cmd = dict()
+
+        self.sio = socketio.Client()
+        self.sio.on('read_from', self.handler)
+        self.sio.on('connect', self.connect)
+        self.sio.on('disconnect', self.disconnect)
 
         self.server_url = 'http://server.strokeside.ru:9090'
         self.sio.connect(self.server_url)
 
-    @sio.on(id_cmd)
+    def connect(self):
+        self.logger.info("Connection to server {}".format(self.server_url))
+
+    def disconnect(self):
+        self.logger.info("Disconnection from server")
+
     def handler(self, cmd):
         self.cmd = json.loads(cmd)
         self.logger.debug("Receive from server {}".format(cmd))
+
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
                 self.pySS.number_all_erg()
@@ -362,32 +368,33 @@ class PyStrokeSideSocketIO:
 
 
 if __name__ == '__main__':
-    #console = PyStrokeSideSocketIO()
-    pySS = None
-    ergs = pyrow.find()
-    if ergs:
-        pySS = PyStrokeSide(ergs[0])
+    console = PyStrokeSideSocketIO()
 
-    pySS.restore_erg()
-    pySS.wait(5)
-
-    pySS.number_all_erg()
-    pySS.is_request_new_line = True
-    pySS.request_new_line_number()
-    pySS.number_erg_done()
-
-    pySS.set_race()
-    pySS.wait(5)
-
-    pySS.prepare_to_race()
-    pySS.wait(10)
-
-    pySS.start_race()
-
-    pySS.process_race_data()
-
-    pySS.wait(5)
-    pySS.close()
+    # pySS = None
+    # ergs = pyrow.find()
+    # if ergs:
+    #     pySS = PyStrokeSide(ergs[0])
+    #
+    # pySS.restore_erg()
+    # pySS.wait(5)
+    #
+    # pySS.number_all_erg()
+    # pySS.is_request_new_line = True
+    # pySS.request_new_line_number()
+    # pySS.number_erg_done()
+    #
+    # pySS.set_race()
+    # pySS.wait(5)
+    #
+    # pySS.prepare_to_race()
+    # pySS.wait(10)
+    #
+    # pySS.start_race()
+    #
+    # pySS.process_race_data()
+    #
+    # pySS.wait(5)
+    # pySS.close()
 
 
 
