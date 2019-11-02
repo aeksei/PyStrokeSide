@@ -380,12 +380,13 @@ class PyStrokeSideConsole:
 
 
 if __name__ == '__main__':
-    loop = asyncio.ProactorEventLoop()
-    asyncio.set_event_loop(loop)
-    console = PyStrokeSideConsole(loop)
-    asyncio.run(console.main())
+    pySS = PyStrokeSide()
+    pySS.restore_erg()
+    pySS.wait(5)
 
-    """
+    pySS.number_all_erg()
+    pySS.restore_erg()
+
     pySS.set_race()
     pySS.wait(5)
 
@@ -398,7 +399,6 @@ if __name__ == '__main__':
 
     pySS.wait(5)
     pySS.close()
-    """
 
 
 
