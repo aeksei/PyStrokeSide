@@ -1,6 +1,6 @@
 import sys
 import json
-import asyncio
+import socketio
 import logging.config
 from time import sleep
 from pyrow import pyrow
@@ -323,8 +323,11 @@ class PyStrokeSide:
                 pass
 
 
-class PyStrokeSideConsole:
-    def __init__(self, loop):
+class PyStrokeSideSocketIO:
+    sio = socketio.Client()
+    id_cmd = 'test'
+
+    def __init__(self):
         with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.logger = logging.getLogger("PySSConsole")
@@ -332,45 +335,24 @@ class PyStrokeSideConsole:
         self.ergs = pyrow.find()
         if self.ergs:
             self.pySS = PyStrokeSide(self.ergs[0])
-
-        self.cmd = {}
-
-
-    async def main(self):
-        if self.ergs:
-            self.pySS.master_erg = self.ergs[0]
             self.pySS.restore_erg()
             self.pySS.wait(5)
-        else:
-            pass
-            self.write({'erg_numeration': {'Not found ergs': ''}})
 
+            self.pySS.close()
 
+        self.cmd = dict()
+        self.request_new_number = False
 
-    async def read(self):
-        line = await self.reader.readline()
-        if line:
-            self.cmd = json.loads(line[:-1])
-            self.logger.debug("receive from server{}".format(self.cmd))
-        else:
-            self.logger.debug("close subprosess")
-        sys.stdin.flush()
-
-    def write(self, cmd):
-        self.logger.debug("send to server {}".format(cmd))
-        cmd = json.dumps(cmd) + '\n'
-        sys.stdout.write(cmd)
-        sys.stdout.flush()
-
-    async def handler(self):
+    @sio.on(id_cmd, json)
+    def handler(self):
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
-                # self.pySS.number_all_erg()
-                self.cmd = {'erg_numeration': {'request_new_line_number': ''}}
+                self.pySS.number_all_erg()
+
             elif 'request_new_line_number' in self.cmd['erg_numeration']:
                 self.logger.debug('request_new_line_number')
                 while True:
-                    await self.logger.debug('request_new_line_number')
+                    self.logger.debug('request_new_line_number')
                 # self.pySS.request_new_line_number()
             elif 'number_erg_done' in self.cmd['erg_numeration']:
                 # self.pySS.number_erg_done()
@@ -380,6 +362,10 @@ class PyStrokeSideConsole:
 
 
 if __name__ == '__main__':
+    console = PyStrokeSideSocketIO()
+
+
+    """
     pySS = PyStrokeSide()
     pySS.restore_erg()
     pySS.wait(5)
@@ -399,6 +385,7 @@ if __name__ == '__main__':
 
     pySS.wait(5)
     pySS.close()
+    """
 
 
 
