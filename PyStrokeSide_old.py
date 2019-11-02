@@ -194,49 +194,49 @@ class PyStrokeSide:
         self.logger.info("erg {} is lane: {}".format(cmd[2], cmd[8]))
         self.logger.debug(_int2bytes(cmd))
 
-    def set_all_race_params_command(self, cmd):
-        if cmd[2] == list(self.erg_line)[0]:
-            self.total_distance = _bytes2int(cmd[30:34])
-            self.logger.info("set distance: {}".format(self.total_distance))
-            self.logger.debug(_int2bytes(cmd))
+    # def set_all_race_params_command(self, cmd):
+    #     if cmd[2] == list(self.erg_line)[0]:
+    #         self.total_distance = _bytes2int(cmd[30:34])
+    #         self.logger.info("set distance: {}".format(self.total_distance))
+    #         self.logger.debug(_int2bytes(cmd))
+    #
+    #         self.new_race_logger()
+    #         self.check_team_race()
+    #         self.finish_time = {line: 0 for line in self.participant_name}
+    #
+    #         self.write_config()
 
-            self.new_race_logger()
-            self.check_team_race()
-            self.finish_time = {line: 0 for line in self.participant_name}
-
-            self.write_config()
-
-    def update_race_data_response(self, resp):
-        src = resp[3]
-
-        distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
-        time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
-        stroke = resp[24]  # stroke
-        split = round(500 * (time / distance) if distance != 0 else 0, 2)
-
-        erg_data = dict(line=self.erg_line[src],
-                        participant_name=self.participant_name[self.erg_line[src]],
-                        distance=distance,
-                        time=time,
-                        stroke=stroke,
-                        split=split)
-        self.race_data[self.erg_line[src]] = erg_data
-
-        self.logger.info(erg_data)
-        self.logger.debug(_int2bytes(resp))
-
-        if src == list(self.erg_line)[-1] and len(self.race_data) != 0:
-            self.send_race_data()
+    # def update_race_data_response(self, resp):
+    #     src = resp[3]
+    #
+    #     distance = round(_bytes2int(resp[14:18]) * 0.1, 1)  # dist * 10
+    #     time = round(_bytes2int(resp[20:24]) * 0.01, 2)  # time * 100
+    #     stroke = resp[24]  # stroke
+    #     split = round(500 * (time / distance) if distance != 0 else 0, 2)
+    #
+    #     erg_data = dict(line=self.erg_line[src],
+    #                     participant_name=self.participant_name[self.erg_line[src]],
+    #                     distance=distance,
+    #                     time=time,
+    #                     stroke=stroke,
+    #                     split=split)
+    #     self.race_data[self.erg_line[src]] = erg_data
+    #
+    #     self.logger.info(erg_data)
+    #     self.logger.debug(_int2bytes(resp))
+    #
+    #     if src == list(self.erg_line)[-1] and len(self.race_data) != 0:
+    #         self.send_race_data()
 
     def handler(self, cmd):
         if cmd[4] == 0x76 and cmd[6] == 0x32:
             self.set_race_participant_command(cmd)
         elif cmd[4] == 0x7e and cmd[6] == 0x0b:
             self.set_race_lane_setup_command(cmd)
-        elif cmd[5] == 0x76 and cmd[7] == 0x33:
-            self.update_race_data_response(cmd)
-        elif cmd[4] == 0x76 and cmd[6] == 0x1d:
-            self.set_all_race_params_command(cmd)
+        # elif cmd[5] == 0x76 and cmd[7] == 0x33:
+        #     self.update_race_data_response(cmd)
+        # elif cmd[4] == 0x76 and cmd[6] == 0x1d:
+        #     self.set_all_race_params_command(cmd)
 
     @staticmethod
     def byte_staffing(cmd):
