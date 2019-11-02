@@ -35,6 +35,7 @@ class PyStrokeSide:
 
         self.is_request_new_line = False
         self.is_race_start = False
+        self.is_wait = False
 
     def reset_all_erg(self):  # reset all
         self.PySS_logger.info("Start reset all ergs")
@@ -148,6 +149,9 @@ class PyStrokeSide:
 
         self.restore_line_number()
         self.master_erg.set_screen_state(0xFF, 0x0E)
+
+        self.is_wait = True
+        self.wait()
 
     def request_new_line_number(self):
         self.PySS_logger.info("Start request new line number from ergs")
@@ -309,19 +313,16 @@ class PyStrokeSide:
         self.master_erg.set_race_operation_type(0xFF, 0x00)
 
     def wait(self, time=0):
-        if time:
+        if time != 0:
             for _ in range(time):
                 for erg_num in self.erg_num:
                     self.master_erg.get_erg_info(erg_num)
                 sleep(1)
-        else:
-            try:
-                while True:
-                    for erg_num in self.erg_num:
-                        self.master_erg.get_erg_info(erg_num)
-                    sleep(1)
-            except KeyboardInterrupt:
-                pass
+                
+        while self.is_wait:
+            for erg_num in self.erg_num:
+                self.master_erg.get_erg_info(erg_num)
+            sleep(1)
 
 
 class PyStrokeSideSocketIO:
@@ -330,13 +331,6 @@ class PyStrokeSideSocketIO:
             logging.config.dictConfig(json.load(f))
         self.logger = logging.getLogger("PySSConsole")
 
-        self.ergs = pyrow.find()
-        if self.ergs:
-            self.pySS = PyStrokeSide(self.ergs[0])
-            self.pySS.restore_erg()
-
-        self.cmd = dict()
-
         self.sio = socketio.Client()
         self.sio.on('read_from', self.handler)
         self.sio.on('connect', self.connect)
@@ -344,6 +338,13 @@ class PyStrokeSideSocketIO:
 
         self.server_url = 'http://server.strokeside.ru:9090'
         self.sio.connect(self.server_url)
+
+        self.ergs = pyrow.find()
+        if self.ergs:
+            self.pySS = PyStrokeSide(self.ergs[0])
+            self.pySS.restore_erg()
+
+        self.cmd = dict()
 
     def connect(self):
         self.logger.info("Connection to server {}".format(self.server_url))
@@ -357,14 +358,29 @@ class PyStrokeSideSocketIO:
 
         if 'erg_numeration' in self.cmd:
             if 'number_all_ergs' in self.cmd['erg_numeration']:
+                self.pySS.is_wait = False
                 self.pySS.number_all_erg()
                 self.pySS.is_request_new_line = True
-                self.sio.start_background_task(self.pySS.request_new_line_number)
+                self.pySS.request_new_line_number()
             elif 'number_erg_done' in self.cmd['erg_numeration']:
                 self.pySS.is_request_new_line = False
                 self.pySS.number_erg_done()
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass
+        elif 'race_definition' in self.cmd:
+            self.pySS.is_wait = False
+            self.pySS.set_race()  # установка участников и названия дистанции
+            self.pySS.is_wait = True
+            self.pySS.wait()
+        elif 'race_data' in self.cmd:
+            if 'prepare_to_race' in self.cmd['race_data']:
+                self.pySS.is_wait = False
+                self.pySS.prepare_to_race()  # обнуление секундомера и установка дистанции
+                self.pySS.is_wait = True
+                self.pySS.wait()
+            elif 'start_race' in self.cmd['race_data']:
+                self.pySS.is_wait = False
+                self.pySS.start_race()
 
 
 if __name__ == '__main__':
