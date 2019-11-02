@@ -379,7 +379,7 @@ class PyStrokeSideSocketIO:
                 # self.pySS.distance = self.cmd['race_definition']['distance']
                 # self.pySS.race_name=self.cmd['race_definition']['race_name']
                 # self.pySS.team_size=self.cmd['race_definition']['team_size']
-
+    
             self.pySS.is_wait = False
             self.pySS.set_race()  # установка участников и названия дистанции
             self.pySS.is_wait = True
