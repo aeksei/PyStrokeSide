@@ -259,13 +259,13 @@ class PyStrokeSide:
         for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x06)
         for erg_num in self.erg_num:
-            self.master_erg.set_all_race_params(erg_num, self.config['race_defenition']['distance'])
+            self.master_erg.set_all_race_params(erg_num, self.config['distance'])
             self.master_erg.configure_workout(erg_num)
             self.master_erg.set_screen_state(erg_num, 0x04)
         for erg_num in self.erg_num:
             self.master_erg.set_race_operation_type(erg_num, 0x08)
 
-        self.erg_race.set_config_race(len(self.erg_num), self.config['race_defenition']['team_size'], self.config['race_defenition']['distance'])
+        self.erg_race.set_config_race(len(self.erg_num), self.config['team_size'], self.config['distance'])
 
     def start_race(self):
         self.PySS_logger.info("Start race")
@@ -317,11 +317,11 @@ class PyStrokeSide:
                 for erg_num in self.erg_num:
                     self.master_erg.get_erg_info(erg_num)
                 sleep(1)
-
-        while self.is_wait:
-            for erg_num in self.erg_num:
-                self.master_erg.get_erg_info(erg_num)
-            sleep(1)
+        else:
+            while self.is_wait:
+                for erg_num in self.erg_num:
+                    self.master_erg.get_erg_info(erg_num)
+                sleep(1)
 
 
 class PyStrokeSideSocketIO:
@@ -329,11 +329,6 @@ class PyStrokeSideSocketIO:
         with open("logging.json", "r") as f:
             logging.config.dictConfig(json.load(f))
         self.logger = logging.getLogger("PySSConsole")
-
-        self.ergs = pyrow.find()
-        if self.ergs:
-            self.pySS = PyStrokeSide(self.ergs[0])
-            self.pySS.restore_erg()
 
         self.cmd = dict()
 
@@ -344,6 +339,11 @@ class PyStrokeSideSocketIO:
 
         self.server_url = 'http://server.strokeside.ru:9090'
         self.sio.connect(self.server_url)
+
+        self.ergs = pyrow.find()
+        if self.ergs:
+            self.pySS = PyStrokeSide(self.ergs[0])
+            self.pySS.restore_erg()
 
     def connect(self):
         self.logger.info("Connection to server {}".format(self.server_url))
@@ -366,21 +366,24 @@ class PyStrokeSideSocketIO:
                 self.pySS.number_erg_done()
             elif 'number_missing_ergs' in self.cmd['erg_numeration']:
                 pass
-        elif 'race_defenition' in self.cmd:
-            if 'race_participant' in self.cmd['race_defenition']: #проверяем есть ли race_participant и записываем в конфиг и pySS изменения
-                self.pySS.config['race_participant'] = self.cmd['race_defenition']['race_participant']
-                self.pySS.config['race_name'] = self.cmd['race_defenition']['race_name']
-                self.pySS.config['team_size'] = self.cmd['race_defenition']['team_size']
-                self.pySS.config['distance'] = self.cmd['race_defenition']['distance']
-                self.pySS.race_participant = self.cmd['race_defenition']['race_participant']
-                #self.pySS.distance = self.cmd['race_defenition']['distance']
-                self.pySS.race_name=self.cmd['race_defenition']['race_name']
-                #self.pySS.team_size=self.cmd['race_defenition']['team_size']
+        elif 'race_definition' in self.cmd:
+            if 'race_participant' in self.cmd['race_definition']:  # проверяем есть ли race_participant и записываем в конфиг и pySS изменения
+                self.pySS.config['race_participant'] = self.cmd['race_definition']['race_participant']
+            if 'race_name' in self.cmd['race_definition']:
+                self.pySS.config['race_name'] = self.cmd['race_definition']['race_name']
+            if 'team_size' in self.cmd['race_definition']:
+                self.pySS.config['team_size'] = self.cmd['race_definition']['team_size']
+            if 'distance' in self.cmd['race_definition']:
+                self.pySS.config['distance'] = self.cmd['race_definition']['distance']
+                # self.pySS.race_participant = self.cmd['race_definition']['race_participant']
+                # self.pySS.distance = self.cmd['race_definition']['distance']
+                # self.pySS.race_name=self.cmd['race_definition']['race_name']
+                # self.pySS.team_size=self.cmd['race_definition']['team_size']
 
-                self.pySS.is_wait = False
-                self.pySS.set_race()  # установка участников и названия дистанции
-                self.pySS.is_wait = True
-                self.pySS.wait()
+            self.pySS.is_wait = False
+            self.pySS.set_race()  # установка участников и названия дистанции
+            self.pySS.is_wait = True
+            self.pySS.wait()
 
         elif 'race_data' in self.cmd:
             if 'prepare_to_race' in self.cmd['race_data']:
@@ -391,6 +394,7 @@ class PyStrokeSideSocketIO:
             elif 'start_race' in self.cmd['race_data']:
                 self.pySS.is_wait = False
                 self.pySS.start_race()
+
 
 if __name__ == '__main__':
     console = PyStrokeSideSocketIO()
