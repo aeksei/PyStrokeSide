@@ -18,6 +18,7 @@ import json
 import logging.config
 import datetime
 
+
 import usb.core
 import usb.util
 from usb import USBError
@@ -27,9 +28,12 @@ from test.parser import parse_raw_cmd
 
 import usb.backend.libusb1
 from ctypes import c_void_p, c_int
-backend = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
-backend.lib.libusb_set_option.argtypes = [c_void_p, c_int]
-backend.lib.libusb_set_option(backend.ctx, 1)  # <--- this is the magic call to enable usbdk mode
+
+
+backen = usb.backend.libusb1.get_backend(find_library=lambda x: os.path.join(os.getcwd(), 'libusb', 'libusb-1.0.dll'))
+print(backen)
+backen.lib.libusb_set_option.argtypes = [c_void_p, c_int]
+backen.lib.libusb_set_option(backen.ctx, 1)  # <--- this is the magic call to enable usbdk mode
 
 
 C2_VENDOR_ID = 0x17a4

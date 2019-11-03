@@ -298,6 +298,14 @@ class PyStrokeSide:
         finally:
             self.close()
 
+    def finish_race(self):
+        self.PySS_logger.info("Finish race")
+        for erg_num in self.erg_num: #адреса концептов
+            self.master_erg.workout_state(erg_num)
+            data = self.master_erg.bar(erg_num)
+            self.PySS_logger.debug(data)
+
+
     def close(self):
         self.PySS_logger.info("Close race")
         self.master_erg.set_race_operation_type(0x01, 0x06)

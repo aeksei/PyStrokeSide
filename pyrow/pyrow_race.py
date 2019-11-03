@@ -609,6 +609,8 @@ class PyErgRace(pyrow.PyErg):
 
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         self.send(message)
+        resp=self.send(message)
+        return resp
 
     def bar_bar(self,destination):
         cmd = 'bar_bar'
