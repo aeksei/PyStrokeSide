@@ -39,7 +39,7 @@
         },
         "PySSRace": {
             "handlers": ["console", "rotating_file"],
-            "level": "DEBUG"
+            "level": "INFO"
         }
     }
 }

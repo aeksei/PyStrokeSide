@@ -299,6 +299,7 @@ class PyStrokeSide:
 
                 if self.erg_race.is_finished_race():
                     self.is_race_start = False
+                    self.finish_race()
                 sleep(1)  # ToDO sleep time
 
         except KeyboardInterrupt:
@@ -313,7 +314,6 @@ class PyStrokeSide:
         for erg_num in self.erg_num: #адреса концептов
             self.master_erg.workout_state(erg_num)
             data = self.master_erg.bar(erg_num)
-            self.PySS_logger.debug(data)
 
 
     def close(self):

@@ -349,5 +349,6 @@ def read(transmission):
 
 
 if __name__ == '__main__':
-    print(__bytes2int([0x19, 0xa6, 0x84, 0x95]))
-    print(__bytes2int([0x19, 0xa6, 0x84, 0xda]))
+    #print(__bytes2int([0x19, 0xa6, 0x84, 0x95]))
+    #print(__bytes2int([0x19, 0xa6, 0x84, 0xda]))
+    print(cmd2hex([153, 6, 0, 5, 12, 244, 0, 82]))
