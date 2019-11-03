@@ -98,6 +98,11 @@ cmds['set_race_start_params'] = [0x0d, 0x0e, 0x00, 0x00, [12]]
 # "02 F0 02 00 76 22 33 1D 00 01 00 00 00 00 00 00 00 00 00 00 02 01 00 00 00 00 01 02 00 00 00 00 00 00 00 00 00 C6 BA BC BB F2"
 cmds['update_race_data'] = [0x33, 0x1d, [24], 0x00, 0x00, 0x00, 0x00, 0x00, 0xc6, 0xba, 0xbc, 0xaf]
 
+# finish_race
+cmds['workout_state'] =  [0x8D]  # temp from this dict
+cmds['bar'] = [0x99]  # ????
+cmds['bar_bar'] = [0x6A]  # ????
+
 
 # PM3 Specific Short Commands
 cmds['CSAFE_PM_GET_WORKOUTTYPE'] = [0x89, [], 0x1A]
