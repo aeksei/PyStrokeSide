@@ -101,7 +101,7 @@ cmds['update_race_data'] = [0x33, 0x1d, [24], 0x00, 0x00, 0x00, 0x00, 0x00, 0xc6
 # finish_race
 cmds['workout_state'] =  [0x8D]  # temp from this dict
 cmds['bar'] = [0x99]  # ????
-cmds['bar_bar'] = [0x6A]  # ????
+cmds['bar_bar'] = [0x6A, 0x05, []]  # ????
 
 
 # PM3 Specific Short Commands

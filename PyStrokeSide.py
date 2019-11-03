@@ -7,6 +7,10 @@ from config import Config
 from pyrow.pyrow_race import PyErgRace
 from pyrow.pyrow_data import PyErgRaceData
 from pyrow.csafe.csafe_cmd import get_start_param
+from pyrow.csafe.csafe_cmd import __bytes2int, __int2bytes
+
+bytes2int = __bytes2int
+int2bytes = __int2bytes
 
 
 class PyStrokeSide:
@@ -313,7 +317,18 @@ class PyStrokeSide:
         self.PySS_logger.info("Finish race")
         for erg_num in self.erg_num: #адреса концептов
             self.master_erg.workout_state(erg_num)
-            data = self.master_erg.bar(erg_num)
+            data = self.master_erg.bar(erg_num) # 00 05 E4 70 00 52
+            self.master_erg.bar_bar(erg_num,data[:-2]+[0x40])
+            # 2019-11-02 22:48:38,972 raw INFO bar_bar,02,00,76,07,6A,05 00 05 E4 70 40 /+ 0x40
+            data_int=bytes2int(data[:-2])
+            data_int+=0x40
+            data_byte=int2bytes(4,data_int) # 00 05 E4 B0
+            data_byte.append(data[-1]-0x40) #00 05 E4 B0 12
+            self.master_erg.bar_bar(erg_num, data_byte)
+
+            #     2019-11-02 22:48:38,971 raw INFO bar,00,02,76,08,99,06 00 05 E4 70 00 52
+            # 2019-11-02 22:48:38,972 raw INFO bar_bar,02,00,76,07,6A,05 00 05 E4 70 40 /+ 0x40
+            # 2019-11-02 22:48:38,997 raw INFO bar_bar,02,00,76,07,6A,05 00 05 E4 B0 12 /- 0x40
 
 
     def close(self):

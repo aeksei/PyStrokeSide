@@ -613,16 +613,21 @@ class PyErgRace(pyrow.PyErg):
 
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
-
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        #{'CSAFE_GETSTATUS_CMD': [129], 'CSAFE_SETPMCFG_CMD': [153, 6, 0, 5, 12, 244, 0, 82]}
         resp = self.send(message)
         self.pyrow_race_logger.debug("Response from {:02X} erg: {}".format(destination, resp))
-        return resp
+        return resp['CSAFE_SETPMCFG_CMD'][2:]
 
-    def bar_bar(self, destination):
+    def bar_bar(self, destination,params):
         cmd = 'bar_bar'
         data = csafe_dic.cmds[cmd]
+        data = data[:-1]
+        data.extend(params)
 
+        #     2019-11-02 22:48:38,971 raw INFO bar,00,02,76,08,99,06 00 05 E4 70 00 52
+        # 2019-11-02 22:48:38,972 raw INFO bar_bar,02,00,76,07,6A,05 00 05 E4 70 40 /+ 0x40
+        # 2019-11-02 22:48:38,997 raw INFO bar_bar,02,00,76,07,6A,05 00 05 E4 B0 12 /- 0x40
         message = [[destination, 0x00, 0x76, len(data)]]
         message.extend(data)
 
