@@ -75,16 +75,17 @@ class PyErgRaceData:
         return self.get_leader_board(boat)
 
     def set_update_race_data(self, line_number, resp):
-        distance = round(_bytes2int(resp[7:11]) * 0.1, 1)  # dist * 10
-        time = round(_bytes2int(resp[13:17]) * 0.01, 2)  # time * 100
-        stroke = resp[17]  # stroke
-        split = round(500 * (time / distance) if distance != 0 else 0, 2)
+        if resp:
+            distance = round(_bytes2int(resp[7:11]) * 0.1, 1)  # dist * 10
+            time = round(_bytes2int(resp[13:17]) * 0.01, 2)  # time * 100
+            stroke = resp[17]  # stroke
+            split = round(500 * (time / distance) if distance != 0 else 0, 2)
 
-        self.race_data[line_number] = dict(lane_number=line_number,
-                                           distance=distance,
-                                           time=time,
-                                           stroke=stroke,
-                                           split=split)
+            self.race_data[line_number] = dict(lane_number=line_number,
+                                               distance=distance,
+                                               time=time,
+                                               stroke=stroke,
+                                               split=split)
         self.PySSRace_logger.debug("Participant have result {}".format(self.race_data[line_number]))
 
     def is_finished_race(self):
