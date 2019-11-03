@@ -587,3 +587,38 @@ class PyErgRace(pyrow.PyErg):
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         resp = self.send(message)
         return resp['CSAFE_SETPMCFG_CMD']
+
+    # cmds['workout_state'] = [0x8D]  # temp from this dict
+    # cmds['bar'] = [0x99]  # ????
+    # cmds['bar_bar'] = [0x6A]
+
+    def workout_state(self,destination):
+        cmd = 'workout_state'
+        data = csafe_dic.cmds[cmd]
+        message = [[destination, 0x00, 0x7E, len(data)]]
+        message.extend(data)
+
+        self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def bar(self,destination):
+        cmd = 'bar'
+        data = csafe_dic.cmds[cmd]
+        message = [[destination, 0x00, 0x76, len(data)]]
+        message.extend(data)
+
+        self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+    def bar_bar(self,destination):
+        cmd = 'bar_bar'
+        data = csafe_dic.cmds[cmd]
+        message = [[destination, 0x00, 0x76, len(data)]]
+        message.extend(data)
+
+        self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
+        self.send(message)
+
+
+
+
