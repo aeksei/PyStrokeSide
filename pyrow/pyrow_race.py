@@ -368,6 +368,7 @@ class PyErgRace(pyrow.PyErg):
         data[-2] = race_line
 
         message = [[destination, 0x00, 0x76, len(data)]]
+
         message.extend(data)
 
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X} with race line {:02X}'.format(self._erg_num,
@@ -586,4 +587,5 @@ class PyErgRace(pyrow.PyErg):
 
         self.pyrow_race_logger.debug('Erg {:02X} {} to erg {:02X}'.format(self._erg_num, cmd, destination))
         resp = self.send(message)
+        self.pyrow_race_logger.debug("Response from {:02X} erg: {}".format(self._erg_num, resp))
         return resp['CSAFE_SETPMCFG_CMD']

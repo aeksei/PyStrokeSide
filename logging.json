@@ -23,17 +23,21 @@
     "loggers": {
         "pyrow": {
             "handlers": ["rotating_file"],
-            "level": "INFO"
+            "level": "ERROR"
         },
         "pyrow_race": {
             "handlers": ["console", "rotating_file"],
-            "level": "INFO"
+            "level": "DEBUG"
         },
         "PySS": {
             "handlers": ["console", "rotating_file"],
             "level": "DEBUG"
         },
         "PySSConsole": {
+            "handlers": ["console", "rotating_file"],
+            "level": "DEBUG"
+        },
+        "PySSRace": {
             "handlers": ["console", "rotating_file"],
             "level": "DEBUG"
         }

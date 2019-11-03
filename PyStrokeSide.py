@@ -1,4 +1,3 @@
-import sys
 import json
 import socketio
 import logging.config
@@ -297,10 +296,12 @@ class PyStrokeSide:
                     resp = self.master_erg.update_race_data(erg_num, cmd_data)
                     self.erg_race.set_update_race_data(line_number, resp)
                 sleep(1)  # ToDO sleep time
+                if self.erg_race.is_finished_race():
+                    self.is_race_start = False
         except KeyboardInterrupt:
             pass
         except Exception as e:
-            print(e)
+            self.PySS_logger.error(e, exc_info=True)
         finally:
             self.close()
 
@@ -343,7 +344,7 @@ class PyStrokeSideSocketIO:
         self.sio.on('connect', self.connect)
         self.sio.on('disconnect', self.disconnect)
 
-        self.server_url = 'http://localhost:9090'
+        self.server_url = 'http://10.211.55.2:9090'
         self.sio.connect(self.server_url)
 
         self.ergs = pyrow.find()

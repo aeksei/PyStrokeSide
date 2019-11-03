@@ -4,7 +4,7 @@
         "430343302": 2,
         "430343317": 3
     },
-    "master_erg_serial": 430343302,
+    "master_erg_serial": 430343386,
     "race_name": "test_race",
     "race_participant": {
         "1": "Lane_1",
@@ -12,10 +12,10 @@
         "3": "Lane_3"
     },
     "erg_num": {
-        "1": 2,
-        "2": 1,
+        "1": 1,
+        "2": 2,
         "3": 3
     },
     "team_size": 1,
-    "distance": 2000
+    "distance": 100
 }
