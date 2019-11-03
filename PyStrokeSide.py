@@ -282,10 +282,16 @@ class PyStrokeSide:
 
         self.wait(3)  # TODO check false start
 
+    def stop_race(self):
+        # TODO stop race without close app
+        self.PySS_logger.info("Stop race")
+        for erg_num in self.erg_num:
+            self.master_erg.set_screen_state(erg_num, 0x06)
+
     def process_race_data(self):
         self.PySS_logger.info("Race data from ergs")
         try:
-            while True:  # TODO is_race_start
+            while self.is_race_start:
                 for erg_num, line_number in self.erg_num.items():
                     cmd_data = self.erg_race.get_update_race_data(line_number)
                     resp = self.master_erg.update_race_data(erg_num, cmd_data)
@@ -337,7 +343,7 @@ class PyStrokeSideSocketIO:
         self.sio.on('connect', self.connect)
         self.sio.on('disconnect', self.disconnect)
 
-        self.server_url = 'http://server.strokeside.ru:9090'
+        self.server_url = 'http://localhost:9090'
         self.sio.connect(self.server_url)
 
         self.ergs = pyrow.find()
@@ -394,6 +400,13 @@ class PyStrokeSideSocketIO:
             elif 'start_race' in self.cmd['race_data']:
                 self.pySS.is_wait = False
                 self.pySS.start_race()
+                self.pySS.is_race_start = True
+                self.pySS.process_race_data()  # получение данных от концептов во время гонки
+            elif 'stop_race' in self.cmd['race_data']:
+                self.pySS.is_race_start = False
+                self.pySS.stop_race()
+                self.pySS.is_wait = True
+                self.pySS.wait()
 
 
 if __name__ == '__main__':
