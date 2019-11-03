@@ -293,11 +293,14 @@ class PyStrokeSide:
             while self.is_race_start:
                 for erg_num, line_number in self.erg_num.items():
                     cmd_data = self.erg_race.get_update_race_data(line_number)
+                    self.PySS_logger.debug("data {} for master_erg.update_race_data".format(cmd_data))
                     resp = self.master_erg.update_race_data(erg_num, cmd_data)
                     self.erg_race.set_update_race_data(line_number, resp)
-                sleep(1)  # ToDO sleep time
+
                 if self.erg_race.is_finished_race():
                     self.is_race_start = False
+                sleep(1)  # ToDO sleep time
+
         except KeyboardInterrupt:
             pass
         except Exception as e:
