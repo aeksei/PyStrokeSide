@@ -1,5 +1,8 @@
 venv/
+pyrow/__pycache__
 .idea/
 *.log
 
 *.conf
+*.txt
+*.pyc
